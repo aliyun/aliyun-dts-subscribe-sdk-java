@@ -2,9 +2,9 @@ package com.aliyun.dts.subscribe.clients.check;
 
 import com.aliyun.dts.subscribe.clients.ConsumerContext;
 import com.aliyun.dts.subscribe.clients.check.util.NetUtil;
+import com.aliyun.dts.subscribe.clients.check.util.NodeCommandClient;
+import com.aliyun.dts.subscribe.clients.check.util.NodeCommandClientConfig;
 import com.aliyun.dts.subscribe.clients.common.Util;
-import com.taobao.drc.togo.util.NodeCommandClient;
-import com.taobao.drc.togo.util.NodeCommandClientConfig;
 
 import org.apache.kafka.common.Node;
 import org.apache.kafka.common.requests.MetadataResponse;
