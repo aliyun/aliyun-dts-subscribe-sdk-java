@@ -87,9 +87,12 @@ public abstract class AbstractUserMetaStore implements MetaStore<Checkpoint> {
     public Checkpoint deserializeFrom(TopicPartition topicPartition, String groupID) {
 
         String checkpointData = getData(groupID);
-        StoreElement storeElement = fromString(checkpointData);
-        if (StringUtils.equals(storeElement.groupName, groupID)) {
-            return storeElement.streamCheckpoint.get(topicPartition);
+
+        if (StringUtils.isNotEmpty(checkpointData)) {
+            StoreElement storeElement = fromString(checkpointData);
+            if (StringUtils.equals(storeElement.groupName, groupID)) {
+                return storeElement.streamCheckpoint.get(topicPartition);
+            }
         }
 
         return null;
