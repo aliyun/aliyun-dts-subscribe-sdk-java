@@ -12,7 +12,7 @@ public class NetUtil {
             soc = new Socket();
             soc.connect(new InetSocketAddress(ip, port), 5000);
             return true;
-        } catch (IOException ex) {
+        } catch (Exception ex) {
             throw new SocketException(ex.getMessage());
         } finally {
             try {

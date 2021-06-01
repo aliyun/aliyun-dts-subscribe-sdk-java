@@ -9,6 +9,6 @@ public interface DTSConsumer {
 
     void addRecordListeners(Map<String, RecordListener> recordListeners);
 
-    void check();
+    boolean check();
 }
 
