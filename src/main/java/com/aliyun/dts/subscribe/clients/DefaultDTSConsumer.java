@@ -45,7 +45,12 @@ public class DefaultDTSConsumer implements DTSConsumer {
     public void start() {
 
         //check firstly
-        check();
+        boolean checkResult = check();
+
+        if (!checkResult) {
+            log.error("DTS precheck failed, dts consumer exit.");
+            return;
+        }
 
         synchronized (this) {
             initLog4j();
@@ -98,7 +103,7 @@ public class DefaultDTSConsumer implements DTSConsumer {
     }
 
     @Override
-    public void check() {
+    public boolean check() {
         CheckManager checkerManager = new DefaultCheckManager(consumerContext);
 
         checkerManager.addCheckItem(new SubscribeNetworkChecker(consumerContext.getBrokerUrl()));
@@ -109,11 +114,11 @@ public class DefaultDTSConsumer implements DTSConsumer {
 
         if (checkResult.isOk()) {
             log.info(checkResult.toString());
+            return true;
         } else {
             log.error(checkResult.toString());
-            System.exit(1);
+            return false;
         }
-
     }
 
     private static Properties initLog4j() {

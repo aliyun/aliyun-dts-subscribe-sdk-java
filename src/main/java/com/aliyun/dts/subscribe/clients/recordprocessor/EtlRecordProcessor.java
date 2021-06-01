@@ -63,6 +63,7 @@ public class EtlRecordProcessor implements  Runnable, Closeable {
 
                 toProcessRecord.poll();
             } catch (Exception e) {
+                log.error("EtlRecordProcessor: process record failed, raw consumer record [" + toProcess + "],  cause " + e.getMessage(), e);
                 consumerContext.exit();
             }
         }
