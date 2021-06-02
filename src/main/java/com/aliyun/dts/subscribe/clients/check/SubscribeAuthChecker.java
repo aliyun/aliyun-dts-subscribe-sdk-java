@@ -4,6 +4,7 @@ import com.aliyun.dts.subscribe.clients.ConsumerContext;
 import com.aliyun.dts.subscribe.clients.check.util.NetUtil;
 import com.aliyun.dts.subscribe.clients.check.util.NodeCommandClient;
 import com.aliyun.dts.subscribe.clients.check.util.NodeCommandClientConfig;
+import com.aliyun.dts.subscribe.clients.common.RetryUtil;
 import com.aliyun.dts.subscribe.clients.common.Util;
 
 import org.apache.kafka.common.Node;
@@ -14,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import java.net.SocketException;
 import java.util.Collection;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 public class SubscribeAuthChecker implements SubscribeChecker {
     private static final Logger LOG = LoggerFactory.getLogger(SubscribeAuthChecker.class);
@@ -24,9 +26,13 @@ public class SubscribeAuthChecker implements SubscribeChecker {
 
     private NodeCommandClient.CommandClient commandClient;
 
+    private RetryUtil retryUtil;
+
     public SubscribeAuthChecker(ConsumerContext consumerContext) {
         this.consumerContext = consumerContext;
         this.subscribeProperties = consumerContext.getKafkaProperties();
+
+        retryUtil = new RetryUtil(4, TimeUnit.SECONDS, 15, (e) -> true);
     }
 
     @Override
@@ -58,8 +64,11 @@ public class SubscribeAuthChecker implements SubscribeChecker {
                 }
 
                 try {
-                    NetUtil.testSocket(node.host(), node.port());
-                } catch (SocketException e) {
+                    retryUtil.callFunctionWithRetry(
+                            () -> {
+                                NetUtil.testSocket(node.host(), node.port());
+                            });
+                } catch (Exception e) {
                     isOk = false;
                     errMsg = "telnet real node " + node.toString() + " failed, please check the network";
 

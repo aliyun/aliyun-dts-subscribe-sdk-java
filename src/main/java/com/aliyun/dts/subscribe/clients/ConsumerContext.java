@@ -7,8 +7,6 @@ import com.aliyun.dts.subscribe.clients.metrics.DTSMetrics;
 import org.apache.kafka.common.TopicPartition;
 
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 
