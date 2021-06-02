@@ -6,6 +6,7 @@ import com.aliyun.dts.subscribe.clients.exception.TimestampSeekException;
 import com.aliyun.dts.subscribe.clients.metastore.KafkaMetaStore;
 import com.aliyun.dts.subscribe.clients.metastore.LocalFileMetaStore;
 import com.aliyun.dts.subscribe.clients.metastore.MetaStoreCenter;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.common.TopicPartition;
@@ -70,7 +71,7 @@ public class KafkaRecordFetcher implements Runnable, Closeable {
         this.tryBackTimeMS = 10000;
 
         //existed = false;
-        metaStoreCenter.registerStore(LOCAL_FILE_STORE_NAME, new LocalFileMetaStore(LOCAL_FILE_STORE_NAME));
+        metaStoreCenter.registerStore(composeLocalFileStoreName(LOCAL_FILE_STORE_NAME, groupID), new LocalFileMetaStore(composeLocalFileStoreName(LOCAL_FILE_STORE_NAME, groupID)));
 
         if (consumerContext.getUserRegisteredStore() != null) {
             metaStoreCenter.registerStore(USER_STORE_NAME, consumerContext.getUserRegisteredStore());
@@ -203,7 +204,7 @@ public class KafkaRecordFetcher implements Runnable, Closeable {
 
     private Checkpoint getCheckpoint() {
         // use local checkpoint priority
-        Checkpoint checkpoint = metaStoreCenter.seek(LOCAL_FILE_STORE_NAME, topicPartition, groupID);
+        Checkpoint checkpoint = metaStoreCenter.seek(composeLocalFileStoreName(LOCAL_FILE_STORE_NAME, groupID), topicPartition, groupID);
         if (null == checkpoint) {
             checkpoint = metaStoreCenter.seek(KAFKA_STORE_NAME, topicPartition, groupID);
         }
@@ -244,6 +245,10 @@ public class KafkaRecordFetcher implements Runnable, Closeable {
 
     public void setToCommitCheckpoint(Checkpoint committedCheckpoint) {
         this.toCommitCheckpoint = committedCheckpoint;
+    }
+
+    private String composeLocalFileStoreName(String prefix, String sid) {
+        return StringUtils.join(prefix, "-", sid);
     }
 
     @Override
