@@ -203,29 +203,35 @@ public class KafkaRecordFetcher implements Runnable, Closeable {
     }
 
     private Checkpoint getCheckpoint() {
+
+        Checkpoint checkpoint = metaStoreCenter.seek(USER_STORE_NAME, topicPartition, groupID);
+        log.info("Firstly, try load checkpoint from user defined shared store: " + checkpoint);
+
         // use local checkpoint priority
-        Checkpoint checkpoint = metaStoreCenter.seek(composeLocalFileStoreName(LOCAL_FILE_STORE_NAME, groupID), topicPartition, groupID);
+        if (null == checkpoint) {
+            checkpoint = metaStoreCenter.seek(composeLocalFileStoreName(LOCAL_FILE_STORE_NAME, groupID), topicPartition, groupID);
+            log.info("User defined shared store checkpoint is null, try load checkpoint from local: " + checkpoint);
+        }
+
         if (null == checkpoint) {
             checkpoint = metaStoreCenter.seek(KAFKA_STORE_NAME, topicPartition, groupID);
+            log.info("User defined shared store checkpoint and local checkpoint is null, try load checkpoint from DStore: " + checkpoint);
         }
 
-        if (null == checkpoint) {
-            checkpoint = metaStoreCenter.seek(USER_STORE_NAME, topicPartition, groupID);
-
-            log.info("DStore checkpoint is null, load checkpoint from user defined shared store: " + checkpoint);
-        }
         return checkpoint;
     }
 
     private Checkpoint getSubscribeCheckpoint() {
-        Checkpoint checkpoint = metaStoreCenter.seek(KAFKA_STORE_NAME, topicPartition, groupID);
-        log.info("Load checkpoint from DStore: " + checkpoint);
+
+        Checkpoint checkpoint = metaStoreCenter.seek(USER_STORE_NAME, topicPartition, groupID);
+
+        log.info("Firstly, try load checkpoint from user defined shared store: " + checkpoint);
 
         if (null == checkpoint) {
-            checkpoint = metaStoreCenter.seek(USER_STORE_NAME, topicPartition, groupID);
-
-            log.info("DStore checkpoint is null, load checkpoint from user defined shared store: " + checkpoint);
+            checkpoint = metaStoreCenter.seek(KAFKA_STORE_NAME, topicPartition, groupID);
+            log.info("User defined shared store checkpoint is null, try load checkpoint from DStore: " + checkpoint);
         }
+
         return checkpoint;
     }
 
