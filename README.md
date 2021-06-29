@@ -11,7 +11,7 @@
             <version>{dts_new_sdk_version}</version>
         </dependency>
 
-        最新的版本请在 https://mvnrepository.com/artifact/com.aliyun.dts/dts-new-subscribe-sdk/ 查看
+        最新的版本请在 https://s01.oss.sonatype.org/#nexus-search;quick~dts-new-subscribe-sdk 查看
 
         2、对于Kafka很了解的用户或者有对sdk内部的逻辑有改造需求的用户可以对该源码进行修改
 
