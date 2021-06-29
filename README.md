@@ -59,11 +59,11 @@
     2、SDK内部对于比如DTS server端的DStore发生容灾切换或者其他可重试的一些错误去重新连接DTS server端：
         1）ASSIGN：
             对于该模式，不管有没有配置consumerContext.setForceUseCheckpoint(true | false)
-            client使用的位点查找顺序如下：本地localCheckpointStore文件--->使用传入的intinal timestamp--->用户配置的外部存储的位点
+            client使用的位点查找顺序如下：用户配置的外部存储的位点--->本地localCheckpointStore文件--->使用传入的intinal timestamp
             
         2）SUBSCRIBE：
             对于该模式，client使用的位点查找顺序如下：
-            DTS server(DStore)保存的位点--->用户配置的外部存储的位点--->使用传入的intinal timestamp--->使用DTS server(新建DStore)的起始位点
+            用户配置的外部存储的位点--->DTS server(DStore)保存的位点--->使用传入的intinal timestamp--->使用DTS server(新建DStore)的起始位点
     
     3、SDK client进程重启：
         1）ASSIGN：
@@ -73,7 +73,7 @@
            本地localCheckpointStore文件--->DTS server(DStore)保存的位点--->用户配置的外部存储的位点
         2）SUBSCRIBE：
            该模式consumerContext.setForceUseCheckpoint无效，位点的查找顺序为：
-           DTS server(DStore)保存的位点--->用户配置的外部存储的位点--->使用传入的intinal timestamp--->使用DTS server(新建DStore)的起始位点
+           用户配置的外部存储的位点--->DTS server(DStore)保存的位点--->使用传入的intinal timestamp--->使用DTS server(新建DStore)的起始位点
         
 统计信息：
      
