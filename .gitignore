@@ -4,5 +4,5 @@ target
 .idea
 dts-new-subscribe-sdk.ipr
 dts-new-subscribe-sdk.iws
-localCheckpointStore
+localCheckpointStore*
 src/test/java/com/aliyun/dts/subscribe/clients/YanmenConsumerDemo.java
