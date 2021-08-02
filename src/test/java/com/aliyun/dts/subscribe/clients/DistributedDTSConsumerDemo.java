@@ -97,83 +97,61 @@ public class DistributedDTSConsumerDemo {
     }
 
 
-//    public static void getSubscribeSubJobs() throws ClientException {
-//        DefaultProfile profile = DefaultProfile.getProfile("cn-hangzhou", "", "");
-//        IAcsClient client = new DefaultAcsClient(profile);
-//        DescribeDtsJobsRequest request = new DescribeDtsJobsRequest();
-//
-//
-//
-//
-//        request.setGroupId("");
-//
-//        request.setJobType("subscribe");
-//        request.setRegion("cn-hangzhou");
-//
-//        DescribeDtsJobsResponse response = client.getAcsResponse(request);
-//        subMigrationJobIds.addAll(response.getDtsJobList().stream().map(DescribeDtsJobsResponse.DtsJobStatus::getDtsJobId).collect(Collectors.toList()));
-//        System.out.println(new Gson().toJson(response));
-//
-//    }
+    public static void getSubscribeSubJobs() throws ClientException {
+        DefaultProfile profile = DefaultProfile.getProfile("cn-hangzhou", "", "");
+        IAcsClient client = new DefaultAcsClient(profile);
+        DescribeDtsJobsRequest request = new DescribeDtsJobsRequest();
 
-//    public static   void getSubscriptionMeta() throws ClientException {
-//        String bisId = "";
-//        String oldMigrationJobId = "";
-//
-//        String url = "http://127.0.0.1:8087/openApiA2a?action=DescribeSubscriptionMeta" +
-//                "&Sid=&bisId=&callerBid=&dtsJobId=&topics=";
-//        String requestId;
-//        String timeStamp = String.valueOf(System.currentTimeMillis());
-//        requestId = timeStamp + "-" + RandomStringUtils.randomAlphanumeric(5);
-//
-//        SubscriptionMetaRequest subscriptionMetaRequest = new SubscriptionMetaRequest("", "",
-//                "", "", Arrays.asList("pc-", "pc-"),
-//                "1625210409880");
-//        String req = JsonUtils.toJson(subscriptionMetaRequest);
-//
-//        Map<String,String> headers = new HashMap<>();
-//        headers.put("Content-Type", "application/json");
-//        headers.put("Accept", "application/json");
-//
-//        //     log.info("Suspend old region migration job, request = {}",req);
-//        String response = HttpUtil.postString(url,"req",headers);
-//        //    log.info("Suspend old region migration job, response = {}",response);
-////        DescribeSubscriptionMetaRequest req = new DescribeSubscriptionMetaRequest();
-////        req.setBisId("");
-////        req.setCallerBid("");
-////        req.setAction("DescribeSubscriptionMeta");
-////        req.setDtsJobId("");
-////        req.setSid("");
-////        req.setSubMigrationJobIds(subMigrationJobIds);
-////
-////        DescribeSubscriptionMetaResponse res = subscriptionController.DescribeSubscriptionMeta(req);
-////        if (res.isSuccess()) {
-////            for (SubscriptionMeta meta: (res).getSubscriptionMetaList()) {
-////                topics.add(meta.getTopic());
-////                sids.add(meta.getSid());
-////                dbLists.add(meta.getDbList());
-////            }
-////        }
-//
-//        JSONObject res = (JSONObject)JSONObject.parse(response);
-//
-//        if ((res.get("success").equals(true))) {
-//            JSONArray metaList = res.getJSONArray("subscriptionMetaList");
-//
-//            for (int i = 0; i < metaList.size(); i++) {
-//                JSONObject meta = metaList.getJSONObject(i);
-//                topics.add(meta.getString("topic"));
-//                sids.add(meta.getString("sid"));
-//                dbLists.add(meta.getString("dbList"));
-//            }
-//
-//        }
-//
-//    }
+
+
+
+        request.setGroupId("");
+
+        request.setJobType("subscribe");
+        request.setRegion("cn-hangzhou");
+
+        DescribeDtsJobsResponse response = client.getAcsResponse(request);
+        subMigrationJobIds.addAll(response.getDtsJobList().stream().map(DescribeDtsJobsResponse.DtsJobStatus::getDtsJobId).collect(Collectors.toList()));
+        System.out.println(new Gson().toJson(response));
+
+    }
+
+    public static   void getSubscriptionMeta() throws ClientException {
+
+        DescribeSubscriptionMetaRequest req = new DescribeSubscriptionMetaRequest();
+        req.setBisId("");
+        req.setCallerBid("");
+        req.setAction("DescribeSubscriptionMeta");
+        req.setDtsJobId("");
+        req.setSid("");
+        req.setSubMigrationJobIds(subMigrationJobIds);
+
+        DescribeSubscriptionMetaResponse res = subscriptionController.DescribeSubscriptionMeta(req);
+        if (res.isSuccess()) {
+            for (SubscriptionMeta meta: (res).getSubscriptionMetaList()) {
+                topics.add(meta.getTopic());
+                sids.add(meta.getSid());
+                dbLists.add(meta.getDbList());
+            }
+        }
+
+        JSONObject res = (JSONObject)JSONObject.parse(response);
+
+        if ((res.get("success").equals(true))) {
+            JSONArray metaList = res.getJSONArray("subscriptionMetaList");
+
+            for (int i = 0; i < metaList.size(); i++) {
+                JSONObject meta = metaList.getJSONObject(i);
+                topics.add(meta.getString("topic"));
+                sids.add(meta.getString("sid"));
+                dbLists.add(meta.getString("dbList"));
+            }
+        }
+    }
 
     public static void main(String[] args) {
-//        getSubscribeSubJobs();
-//        getSubscriptionMeta();
+        getSubscribeSubJobs();
+        getSubscriptionMeta();
 
         String userName = "";
         String password = "";
