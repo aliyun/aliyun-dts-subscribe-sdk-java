@@ -16,8 +16,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-public class DefaultDistributedConsumer implements DistributedConsumer {
-    private static final Logger LOG = LoggerFactory.getLogger(DefaultDistributedConsumer.class);
+public class DefaultDistributedDTSConsumer implements DistributedDTSConsumer {
+    private static final Logger LOG = LoggerFactory.getLogger(DefaultDistributedDTSConsumer.class);
     private List<DTSConsumer> dtsConsumers = new ArrayList<>();
 
 
@@ -26,7 +26,7 @@ public class DefaultDistributedConsumer implements DistributedConsumer {
     private ThreadPoolExecutor executor;
     private volatile boolean isClosePoolExecutor = false;
 
-    public DefaultDistributedConsumer() {}
+    public DefaultDistributedDTSConsumer() {}
 
     public void addDTSConsumer(DTSConsumer consumer) {
         dtsConsumers.add(consumer);
@@ -54,7 +54,7 @@ public class DefaultDistributedConsumer implements DistributedConsumer {
             consumerContext.setUserRegisteredStore(userRegisteredStore);
             consumerContext.setForceUseCheckpoint(isForceUseInitCheckpoint);
 
-            DTSConsumer dtsConsumer = new DistributedDTSConsumer(consumerContext);
+            DTSConsumer dtsConsumer = new DTSConsumerWithDBMapping(consumerContext);
             dtsConsumer.addRecordListeners(recordListeners);
 
             addDTSConsumer(dtsConsumer);

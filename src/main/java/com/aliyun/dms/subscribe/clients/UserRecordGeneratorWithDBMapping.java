@@ -26,8 +26,8 @@ import static com.aliyun.dts.subscribe.clients.common.Util.sleepMS;
 /**
  * This class is to resolve avro record deserialize from bytes to UserRecord
  */
-public class DistributedUserRecordGenerator implements Runnable, Closeable {
-    private static final Logger log = LoggerFactory.getLogger(DistributedUserRecordGenerator.class);
+public class UserRecordGeneratorWithDBMapping implements Runnable, Closeable {
+    private static final Logger log = LoggerFactory.getLogger(UserRecordGeneratorWithDBMapping.class);
 
     private ConsumerContext consumerContext;
     private final LinkedBlockingQueue<ConsumerRecord> toProcessRecord;
@@ -43,9 +43,9 @@ public class DistributedUserRecordGenerator implements Runnable, Closeable {
 
     private final Sensor recordStoreOutCountSensor;
     private final Sensor recordStoreOutByteSensor;
-    public DistributedUserRecordGenerator(ConsumerContext consumerContext, LinkedBlockingQueue<ConsumerRecord> toProcessRecord,
-                                          LinkedBlockingQueue<DefaultUserRecord> processedRecord,
-                                          OffsetCommitCallBack offsetCommitCallBack) {
+    public UserRecordGeneratorWithDBMapping(ConsumerContext consumerContext, LinkedBlockingQueue<ConsumerRecord> toProcessRecord,
+                                            LinkedBlockingQueue<DefaultUserRecord> processedRecord,
+                                            OffsetCommitCallBack offsetCommitCallBack) {
         this.consumerContext = consumerContext;
         this.toProcessRecord = toProcessRecord;
         this.fastDeserializer = new AvroDeserializer();

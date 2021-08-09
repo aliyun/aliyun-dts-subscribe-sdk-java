@@ -1,24 +1,22 @@
 package com.aliyun.dts.subscribe.clients;
 
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
 import com.aliyun.dms.subscribe.clients.DBMapper;
-import com.aliyun.dms.subscribe.clients.DistributedConsumer;
-import com.aliyun.dms.subscribe.clients.DefaultDistributedConsumer;
-
+import com.aliyun.dms.subscribe.clients.DistributedDTSConsumer;
+import com.aliyun.dms.subscribe.clients.DefaultDistributedDTSConsumer;
 
 import com.aliyun.dts.subscribe.clients.common.RecordListener;
 import com.aliyun.dts.subscribe.clients.record.DefaultUserRecord;
 import com.aliyun.dts.subscribe.clients.record.OperationType;
 import com.aliyun.dts.subscribe.clients.recordprocessor.DbType;
 import com.aliyun.dts.subscribe.clients.recordprocessor.DefaultRecordPrintListener;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -26,7 +24,7 @@ import java.util.stream.Collectors;
 public class DistributedDTSConsumerDemo {
     private static final Logger LOG = LoggerFactory.getLogger(DistributedDTSConsumerDemo.class);
 
-    private final DistributedConsumer dmsConsumer;
+    private final DistributedDTSConsumer distributedDTSConsumer;
     private String dProxy = "";
     private String checkpoint = "";
     private Map<String, String> topic2checkpoint;
@@ -37,26 +35,27 @@ public class DistributedDTSConsumerDemo {
     static   ArrayList<String> topics = new ArrayList<>();
     static ArrayList<String> sids = new ArrayList<>();
     static ArrayList<String> dbLists = new ArrayList<>();
-    static   ArrayList<String> subMigrationJobIds = new ArrayList<>();
-    public DistributedDTSConsumerDemo(String username, String password, String host,
+
+    public DistributedDTSConsumerDemo(String username, String password,
                                       ConsumerContext.ConsumerSubscribeMode subscribeMode, boolean isForceUseInitCheckpoint, boolean mapping) {
-        this.dmsConsumer = initDMSConsumer(username, password, host, subscribeMode, isForceUseInitCheckpoint, mapping);
+        DBMapper.setMapping(mapping);
+        for (String dbList: dbLists) {
+            DBMapper.init(dbList);
+        }
+
+        this.distributedDTSConsumer = initDMSConsumer(username, password, subscribeMode, isForceUseInitCheckpoint, mapping);
 
     }
 
-    private DistributedConsumer initDMSConsumer(String username, String password, String host,
-                                                ConsumerContext.ConsumerSubscribeMode subscribeMode, boolean isForceUseInitCheckpoint, boolean mapping) {
-        DefaultDistributedConsumer dmsConsumer = new DefaultDistributedConsumer();
+    private DistributedDTSConsumer initDMSConsumer(String username, String password,
+                                                   ConsumerContext.ConsumerSubscribeMode subscribeMode, boolean isForceUseInitCheckpoint, boolean mapping) {
 
 
-//        this.topic2checkpoint = vo.getTopics2checkpoint();
+        DefaultDistributedDTSConsumer dmsConsumer = new DefaultDistributedDTSConsumer();
         this.topic2checkpoint = new HashMap<>();
+        // user can change checkpoint if needed
         for (String topic: topics) {
             this.topic2checkpoint.put(topic, checkpoint);
-        }
-
-        for (String dbList: dbLists) {
-            DBMapper.init(dbList);
         }
 
         dmsConsumer.init(topic2checkpoint, dProxy, sids, username, password,  subscribeMode, isForceUseInitCheckpoint,
@@ -93,78 +92,55 @@ public class DistributedDTSConsumerDemo {
     }
 
     public void start() {
-        dmsConsumer.start();
+        distributedDTSConsumer.start();
     }
 
 
-    public static void getSubscribeSubJobs() throws ClientException {
-        DefaultProfile profile = DefaultProfile.getProfile("cn-hangzhou", "", "");
+    public static void getSubscribeSubJobs(String region, String groupId, String sid, String dtsInstanceId) throws ClientException {
+        DefaultProfile profile = DefaultProfile.getProfile("", "", "");
         IAcsClient client = new DefaultAcsClient(profile);
         DescribeDtsJobsRequest request = new DescribeDtsJobsRequest();
 
-
-
-
-        request.setGroupId("");
-
+        request.setGroupId(groupId);
         request.setJobType("subscribe");
-        request.setRegion("cn-hangzhou");
+        request.setRegion(region);
 
         DescribeDtsJobsResponse response = client.getAcsResponse(request);
+        List<String> subMigrationJobIds = new ArrayList<>();
         subMigrationJobIds.addAll(response.getDtsJobList().stream().map(DescribeDtsJobsResponse.DtsJobStatus::getDtsJobId).collect(Collectors.toList()));
-        System.out.println(new Gson().toJson(response));
-
-    }
-
-    public static   void getSubscriptionMeta() throws ClientException {
 
         DescribeSubscriptionMetaRequest req = new DescribeSubscriptionMetaRequest();
-        req.setBisId("");
-        req.setCallerBid("");
-        req.setAction("DescribeSubscriptionMeta");
-        req.setDtsJobId("");
-        req.setSid("");
-        req.setSubMigrationJobIds(subMigrationJobIds);
+        req.setSid(sid);
+        req.setSubMigrationJobIds(String.join(",", subMigrationJobIds));
+        req.setSysRegionId(region);
+        req.setDtsInstanceId(dtsInstanceId);
 
-        DescribeSubscriptionMetaResponse res = subscriptionController.DescribeSubscriptionMeta(req);
-        if (res.isSuccess()) {
-            for (SubscriptionMeta meta: (res).getSubscriptionMetaList()) {
+        DescribeSubscriptionMetaResponse res = client.getAcsResponse(req);
+        if (res.getSuccess().equalsIgnoreCase("true")) {
+            for (DescribeSubscriptionMetaResponse.SubscriptionMetaListItem meta: (res).getSubscriptionMetaList()) {
                 topics.add(meta.getTopic());
                 sids.add(meta.getSid());
-                dbLists.add(meta.getDbList());
-            }
-        }
-
-        JSONObject res = (JSONObject)JSONObject.parse(response);
-
-        if ((res.get("success").equals(true))) {
-            JSONArray metaList = res.getJSONArray("subscriptionMetaList");
-
-            for (int i = 0; i < metaList.size(); i++) {
-                JSONObject meta = metaList.getJSONObject(i);
-                topics.add(meta.getString("topic"));
-                sids.add(meta.getString("sid"));
-                dbLists.add(meta.getString("dbList"));
+                dbLists.add(meta.getDBList());
             }
         }
     }
 
-    public static void main(String[] args) {
-        getSubscribeSubJobs();
-        getSubscriptionMeta();
+    public static void main(String[] args) throws ClientException {
+        String region = "cn-hangzhou";
+        String groupId = "";
+        String sid = "";
+        String dtsInstanceId = "";
+        getSubscribeSubJobs(region, groupId, sid, dtsInstanceId);
 
         String userName = "";
         String password = "";
-        String host = "";
-        String topicGroup = "";
+        //   String topicGroup = "";
         boolean mapping = true;
-
-
 
         ConsumerContext.ConsumerSubscribeMode subscribeMode = ConsumerContext.ConsumerSubscribeMode.ASSIGN;
         boolean isForceUseInitCheckpoint = false;
 
-        DistributedDTSConsumerDemo demo = new DistributedDTSConsumerDemo(userName, password, host,  subscribeMode,
+        DistributedDTSConsumerDemo demo = new DistributedDTSConsumerDemo(userName, password,  subscribeMode,
                 isForceUseInitCheckpoint, mapping);
         demo.start();
     }
