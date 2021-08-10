@@ -96,7 +96,7 @@ public class DistributedDTSConsumerDemo {
 
 
     public static void getSubscribeSubJobs(String region, String groupId, String sid, String dtsInstanceId) throws ClientException {
-        DefaultProfile profile = DefaultProfile.getProfile("cn-hangzhou", "", "");
+        DefaultProfile profile = DefaultProfile.getProfile("", "", "");
         IAcsClient client = new DefaultAcsClient(profile);
         DescribeDtsJobsRequest request = new DescribeDtsJobsRequest();
 
@@ -123,7 +123,7 @@ public class DistributedDTSConsumerDemo {
     }
 
     public static void main(String[] args) throws ClientException {
-        String region = "cn-hangzhou";
+        String region = "";
         String groupId = "";
         String sid = "";
         String dtsInstanceId = "";
