@@ -28,20 +28,20 @@ import static com.aliyun.dts.subscribe.clients.common.Util.sleepMS;
 public class UserRecordGenerator implements Runnable, Closeable {
     private static final Logger log = LoggerFactory.getLogger(UserRecordGenerator.class);
 
-    private ConsumerContext consumerContext;
-    private final LinkedBlockingQueue<ConsumerRecord> toProcessRecord;
-    private final AvroDeserializer fastDeserializer;
+    protected ConsumerContext consumerContext;
+    protected final LinkedBlockingQueue<ConsumerRecord> toProcessRecord;
+    protected final AvroDeserializer fastDeserializer;
 
-    private final LinkedBlockingQueue<DefaultUserRecord> processedRecord;
+    protected final LinkedBlockingQueue<DefaultUserRecord> processedRecord;
 
-    private volatile Checkpoint commitCheckpoint;
-    private WorkThread commitThread;
-    private final OffsetCommitCallBack offsetCommitCallBack;
+    protected volatile Checkpoint commitCheckpoint;
+    protected WorkThread commitThread;
+    protected final OffsetCommitCallBack offsetCommitCallBack;
 
-    private Metrics metrics;
+    protected Metrics metrics;
 
-    private final Sensor recordStoreOutCountSensor;
-    private final Sensor recordStoreOutByteSensor;
+    protected final Sensor recordStoreOutCountSensor;
+    protected final Sensor recordStoreOutByteSensor;
 
     public UserRecordGenerator(ConsumerContext consumerContext, LinkedBlockingQueue<ConsumerRecord> toProcessRecord, LinkedBlockingQueue<DefaultUserRecord> processedRecord,
                                OffsetCommitCallBack offsetCommitCallBack) {
@@ -119,7 +119,7 @@ public class UserRecordGenerator implements Runnable, Closeable {
         }
     }
 
-    private boolean offerRecord(int timeOut, TimeUnit timeUnit, DefaultUserRecord defaultUserRecord) {
+    protected boolean offerRecord(int timeOut, TimeUnit timeUnit, DefaultUserRecord defaultUserRecord) {
         try {
             return processedRecord.offer(defaultUserRecord, timeOut, timeUnit);
         } catch (Exception e) {
