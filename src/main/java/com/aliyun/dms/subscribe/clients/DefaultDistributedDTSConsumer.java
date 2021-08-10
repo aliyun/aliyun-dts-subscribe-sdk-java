@@ -32,24 +32,17 @@ public class DefaultDistributedDTSConsumer implements DistributedDTSConsumer {
         dtsConsumers.add(consumer);
     }
 
-    public void init(Map<String, String> topic2checkpoint, String dProxy, List<String> sid, String username, String password,
-        ConsumerContext.ConsumerSubscribeMode subscribeMode,
-        MetaStore<Checkpoint> userRegisteredStore, Map<String, RecordListener> recordListeners) {
 
-        init(topic2checkpoint, dProxy, sid, username, password, subscribeMode, false,
-            userRegisteredStore, recordListeners);
-    }
-    public void init(Map<String, String> topic2checkpoint, String dProxy, List<String> sids, String username, String password,
+    public void init(Map<String, String> topic2checkpoint, String dProxy, Map<String, String> topic2Sid, String username, String password,
                      ConsumerContext.ConsumerSubscribeMode subscribeMode, boolean isForceUseInitCheckpoint,
         MetaStore<Checkpoint> userRegisteredStore, Map<String, RecordListener> recordListeners) {
 
         this.executor = new ThreadPoolExecutor(corePoolSize, maximumPoolSize, 1000 * 60,
             TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>());
-        int i = 0;
+
         for (Map.Entry<String, String> topicCheckpoint: topic2checkpoint.entrySet()) {
 
-         //   String brokerUrl = Util.getBrokerFromDProxy(dProxy, topicCheckpoint.getKey());
-            ConsumerContext consumerContext = new ConsumerContext(dProxy, topicCheckpoint.getKey(), sids.get(i), username, password,
+            ConsumerContext consumerContext = new ConsumerContext(dProxy, topicCheckpoint.getKey(), topic2Sid.get(topicCheckpoint.getKey()), username, password,
                     topicCheckpoint.getValue(), subscribeMode);
             consumerContext.setUserRegisteredStore(userRegisteredStore);
             consumerContext.setForceUseCheckpoint(isForceUseInitCheckpoint);
@@ -62,14 +55,13 @@ public class DefaultDistributedDTSConsumer implements DistributedDTSConsumer {
     }
     @Override
     public void start() {
-            for (DTSConsumer consumer: dtsConsumers) {
-                try {
-                    executor.submit(consumer::start);
-                } catch (Exception e) {
-                    LOG.error("error starting consumer:" + e);
-                }
+        for (DTSConsumer consumer: dtsConsumers) {
+            try {
+                executor.submit(consumer::start);
+            } catch (Exception e) {
+                LOG.error("error starting consumer:" + e);
             }
-
+        }
     }
 
     public void shutdownGracefully(long timeout, TimeUnit timeUnit) {
