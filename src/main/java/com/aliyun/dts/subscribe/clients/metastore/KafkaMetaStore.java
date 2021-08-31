@@ -1,6 +1,7 @@
 package com.aliyun.dts.subscribe.clients.metastore;
 
 import com.aliyun.dts.subscribe.clients.common.Checkpoint;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.clients.consumer.OffsetCommitCallback;
@@ -59,7 +60,7 @@ public class KafkaMetaStore implements MetaStore<Checkpoint> {
     public Checkpoint deserializeFrom(TopicPartition topicPartition, String group) {
         if (null != kafkaConsumer) {
             OffsetAndMetadata offsetAndMetadata = kafkaConsumer.committed(topicPartition);
-            if (null != offsetAndMetadata) {
+            if (null != offsetAndMetadata && StringUtils.isNotEmpty(offsetAndMetadata.metadata())) {
                 return new Checkpoint(topicPartition, Long.valueOf(offsetAndMetadata.metadata()), offsetAndMetadata.offset(), offsetAndMetadata.metadata());
             } else {
                 return null;
