@@ -32,24 +32,23 @@ public class DistributedDTSConsumerDemo {
     private static final Logger LOG = LoggerFactory.getLogger(DistributedDTSConsumerDemo.class);
 
     private final DistributedDTSConsumer distributedDTSConsumer;
-    private String dProxy = "";
-    private String checkpoint = "";
     private static Map<String, String> topic2checkpoint = new HashMap<>();
     private static Map<String, String> topic2Sid = new HashMap<>();
     private static ArrayList<String> dbLists = new ArrayList<>();
 
     public DistributedDTSConsumerDemo(String username, String password,
-                                      ConsumerContext.ConsumerSubscribeMode subscribeMode, boolean isForceUseInitCheckpoint, boolean mapping) {
+                                      ConsumerContext.ConsumerSubscribeMode subscribeMode, String dProxy,
+                                      String checkpoint, boolean isForceUseInitCheckpoint, boolean mapping) {
         DBMapper.setMapping(mapping);
-        for (String dbList: dbLists) {
-            DBMapper.init(dbList);
-        }
+        DBMapper.init(dbLists);
 
-        this.distributedDTSConsumer = initDMSConsumer(username, password, subscribeMode, isForceUseInitCheckpoint);
+        this.distributedDTSConsumer = initDMSConsumer(username, password, subscribeMode, dProxy, checkpoint, isForceUseInitCheckpoint);
+
     }
 
     private DistributedDTSConsumer initDMSConsumer(String username, String password,
-                                                   ConsumerContext.ConsumerSubscribeMode subscribeMode, boolean isForceUseInitCheckpoint) {
+                                                   ConsumerContext.ConsumerSubscribeMode subscribeMode, String dProxy,
+                                                   String checkpoint, boolean isForceUseInitCheckpoint) {
 
         DefaultDistributedDTSConsumer dmsConsumer = new DefaultDistributedDTSConsumer();
         // user can change checkpoint if needed
@@ -74,7 +73,6 @@ public class DistributedDTSConsumerDemo {
                 if(operationType.equals(OperationType.INSERT)
                         || operationType.equals(OperationType.UPDATE)
                         || operationType.equals(OperationType.DELETE)
-                        || operationType.equals(OperationType.DDL)
                         || operationType.equals(OperationType.HEARTBEAT)) {
 
                     // consume record
@@ -96,6 +94,7 @@ public class DistributedDTSConsumerDemo {
 
 
     public static void getSubscribeSubJobs(String region, String groupId, String sid, String dtsInstanceId) throws ClientException {
+        // fill your akId and secret here
         DefaultProfile profile = DefaultProfile.getProfile("", "", "");
         IAcsClient client = new DefaultAcsClient(profile);
         DescribeDtsJobsRequest request = new DescribeDtsJobsRequest();
@@ -110,7 +109,6 @@ public class DistributedDTSConsumerDemo {
         DescribeSubscriptionMetaRequest req = new DescribeSubscriptionMetaRequest();
         req.setSid(sid);
         req.setSubMigrationJobIds(String.join(",", subMigrationJobIds));
-
         req.setDtsInstanceId(dtsInstanceId);
 
         DescribeSubscriptionMetaResponse res = client.getAcsResponse(req);
@@ -120,6 +118,8 @@ public class DistributedDTSConsumerDemo {
                 dbLists.add(meta.getDBList());
             }
         }
+        DBMapper.setClient(client);
+        DBMapper.setDescribeSubscriptionMetaRequest(req);
     }
 
     public static void main(String[] args) throws ClientException {
@@ -131,14 +131,15 @@ public class DistributedDTSConsumerDemo {
 
         String userName = "";
         String password = "";
-        //   String topicGroup = "";
+        String dProxy = "";
+        String checkpoint = "";
         boolean mapping = true;
 
         ConsumerContext.ConsumerSubscribeMode subscribeMode = ConsumerContext.ConsumerSubscribeMode.ASSIGN;
         boolean isForceUseInitCheckpoint = false;
 
-        DistributedDTSConsumerDemo demo = new DistributedDTSConsumerDemo(userName, password,  subscribeMode,
-                isForceUseInitCheckpoint, mapping);
+        DistributedDTSConsumerDemo demo = new DistributedDTSConsumerDemo(userName, password,  subscribeMode, dProxy,
+                checkpoint, isForceUseInitCheckpoint, mapping);
         demo.start();
     }
 }
