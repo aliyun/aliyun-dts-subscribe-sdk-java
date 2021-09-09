@@ -113,12 +113,17 @@ public class DBMapper {
                 log.info("Cannot find logic db table for " + record.getObjectName() + ", refreshing dbList now");
                 try {
                     if (!refreshDbList()) {
-                        Thread.sleep(1000);
-                        if (!refreshDbList()) {
-                            log.error("Failed to refresh dblist");
+                        int retries = 0;
+                        int maxRetries = 5;
+
+                        while (retries < maxRetries && !refreshDbList()) {
+                            retries++;
+                        }
+                        if (retries >= maxRetries) {
+                            log.error("Failed to refresh dblist after " + retries + " retries.");
                         }
                     }
-                } catch (ClientException | InterruptedException e) {
+                } catch (ClientException e) {
                     log.error("Error getting dbList:" + e);
                 }
             }
