@@ -85,15 +85,18 @@ public class DBMapper {
         }
     }
 
-    public static void refreshDbList() throws ClientException {
+    public static boolean refreshDbList() throws ClientException {
         List<String> dbLists = new ArrayList<>();
         DescribeSubscriptionMetaResponse res = iAcsClient.getAcsResponse(describeSubscriptionMetaRequest);
-        if (res.getSuccess().equalsIgnoreCase("true")) {
+        boolean success =  res.getSuccess().equalsIgnoreCase("true");
+        if (success) {
             for (DescribeSubscriptionMetaResponse.SubscriptionMetaListItem meta: (res).getSubscriptionMetaList()) {
                 dbLists.add(meta.getDBList());
             }
+            init(dbLists);
         }
-        init(dbLists);
+        return success;
+
     }
 
     public static Record transform(Record record)  {
@@ -109,8 +112,13 @@ public class DBMapper {
             if (!physic2logicTableMapper.containsKey(record.getObjectName())) {
                 log.info("Cannot find logic db table for " + record.getObjectName() + ", refreshing dbList now");
                 try {
-                    refreshDbList();
-                } catch (ClientException e) {
+                    if (!refreshDbList()) {
+                        Thread.sleep(1000);
+                        if (!refreshDbList()) {
+                            log.error("Failed to refresh dblist");
+                        }
+                    }
+                } catch (ClientException | InterruptedException e) {
                     log.error("Error getting dbList:" + e);
                 }
             }
