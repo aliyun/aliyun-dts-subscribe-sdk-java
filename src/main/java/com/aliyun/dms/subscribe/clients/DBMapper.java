@@ -1,6 +1,7 @@
 package com.aliyun.dms.subscribe.clients;
 
 import com.alibaba.fastjson.JSONObject;
+import com.aliyun.dts.subscribe.clients.common.RetryUtil;
 import com.aliyun.dts.subscribe.clients.formats.avro.Operation;
 import com.aliyun.dts.subscribe.clients.formats.avro.Record;
 import com.aliyuncs.IAcsClient;
@@ -14,6 +15,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class DBMapper {
     private static final Logger log = LoggerFactory.getLogger(DBMapper.class);
@@ -33,6 +35,8 @@ public class DBMapper {
 
     private static IAcsClient iAcsClient;
     private static DescribeSubscriptionMetaRequest describeSubscriptionMetaRequest;
+
+    private static RetryUtil retryUtil = new RetryUtil(4, TimeUnit.SECONDS, 15, (e) -> true);
 
     public static void setClient(IAcsClient client) {
         iAcsClient = client;
@@ -112,25 +116,16 @@ public class DBMapper {
             if (!physic2logicTableMapper.containsKey(record.getObjectName())) {
                 log.info("Cannot find logic db table for " + record.getObjectName() + ", refreshing dbList now");
                 try {
-                    if (!refreshDbList()) {
-                        int retries = 0;
-                        int maxRetries = 5;
-
-                        while (retries < maxRetries && !refreshDbList()) {
-                            retries++;
-                        }
-                        if (retries >= maxRetries) {
-                            log.error("Failed to refresh dblist after " + retries + " retries.");
-                        }
-                    }
-                } catch (ClientException e) {
+                    retryUtil.callFunctionWithRetry(
+                            (RetryUtil.ThrowableFunctionVoid) DBMapper::refreshDbList
+                    );
+                }  catch (Exception e) {
                     log.error("Error getting dbList:" + e);
                 }
             }
             record.setObjectName(physic2logicTableMapper.get(record.getObjectName()));
         }
         return record;
-
     }
 
     public static boolean isMapping() {
