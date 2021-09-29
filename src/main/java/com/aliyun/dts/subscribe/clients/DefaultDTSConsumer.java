@@ -1,6 +1,7 @@
 package com.aliyun.dts.subscribe.clients;
 
 import com.aliyun.dts.subscribe.clients.common.Checkpoint;
+import com.aliyun.dts.subscribe.clients.exception.CriticalException;
 import com.aliyun.dts.subscribe.clients.common.WorkThread;
 import com.aliyun.dts.subscribe.clients.recordfetcher.KafkaRecordFetcher;
 import com.aliyun.dts.subscribe.clients.recordgenerator.UserRecordGenerator;
@@ -30,7 +31,7 @@ public class DefaultDTSConsumer extends AbstractDTSConsumer {
 
         if (!checkResult) {
             log.error("DTS precheck failed, dts consumer exit.");
-            return;
+            throw new CriticalException("DTS precheck failed, dts consumer exit.");
         }
 
         synchronized (this) {
