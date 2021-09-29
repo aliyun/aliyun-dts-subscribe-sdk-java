@@ -1,14 +1,24 @@
 package com.aliyun.dms.subscribe.clients;
 
 import com.alibaba.fastjson.JSONObject;
+import com.aliyun.dts.subscribe.clients.common.RetryUtil;
 import com.aliyun.dts.subscribe.clients.formats.avro.Operation;
 import com.aliyun.dts.subscribe.clients.formats.avro.Record;
+import com.aliyuncs.IAcsClient;
+import com.aliyuncs.dts.model.v20200101.DescribeSubscriptionMetaRequest;
+import com.aliyuncs.dts.model.v20200101.DescribeSubscriptionMetaResponse;
+import com.aliyuncs.exceptions.ClientException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class DBMapper {
-
+    private static final Logger log = LoggerFactory.getLogger(DBMapper.class);
 
     // Object = Map<PhysicDB，Map<LogicTable, List<PhysicTable>>>
     // Map<LogicDB, List<Object>>
@@ -23,8 +33,20 @@ public class DBMapper {
     // map logic dbname to a map stored table name mapping
   //  private static Map<String, Map<String, String>> db2tbMapper;
 
+    private static IAcsClient iAcsClient;
+    private static DescribeSubscriptionMetaRequest describeSubscriptionMetaRequest;
 
-    public static void init(String dbListString) {
+    private static RetryUtil retryUtil = new RetryUtil(4, TimeUnit.SECONDS, 15, (e) -> true);
+
+    public static void setClient(IAcsClient client) {
+        iAcsClient = client;
+    }
+
+    public static void setDescribeSubscriptionMetaRequest(DescribeSubscriptionMetaRequest describeSubscriptionMetaRequest) {
+        DBMapper.describeSubscriptionMetaRequest = describeSubscriptionMetaRequest;
+    }
+
+    public static synchronized void init(String dbListString) {
         JSONObject dbList = JSONObject.parseObject(dbListString);
         for (Map.Entry<String, Object> entry: dbList.entrySet()) {
             String physicDb = entry.getKey();
@@ -38,7 +60,12 @@ public class DBMapper {
                 physic2logicTableMapper.put(physicDb + "." + physicTable, logicDb + "." + logicTable);
             }
         }
+    }
 
+    public static void init(List<String> dbLists) {
+        for (String dbList: dbLists) {
+            DBMapper.init(dbList);
+        }
     }
     public static void init(Map<String, Map<String, Map<String, String>>> dbmapper, boolean map) {
         logic2PhysicDBMapper = dbmapper;
@@ -62,15 +89,45 @@ public class DBMapper {
         }
     }
 
-    public static Record transform(Record record) {
-
-            if (record.getOperation().equals(Operation.DDL)) {
-                record.setObjectName(physic2logicDBMapper.get(record.getObjectName()));
-            } else {
-                record.setObjectName(physic2logicTableMapper.get(record.getObjectName()));
+    public static boolean refreshDbList() throws ClientException {
+        List<String> dbLists = new ArrayList<>();
+        DescribeSubscriptionMetaResponse res = iAcsClient.getAcsResponse(describeSubscriptionMetaRequest);
+        boolean success =  res.getSuccess().equalsIgnoreCase("true");
+        if (success) {
+            for (DescribeSubscriptionMetaResponse.SubscriptionMetaListItem meta: (res).getSubscriptionMetaList()) {
+                dbLists.add(meta.getDBList());
             }
-            return record;
+            init(dbLists);
+        }
+        return success;
 
+    }
+
+    public static Record transform(Record record)  {
+        // do not support ddl for now
+//            if (record.getOperation().equals(Operation.DDL)) {
+//                if (physic2logicDBMapper.containsKey(record.getObjectName())) {
+//                    record.setObjectName(physic2logicDBMapper.get(record.getObjectName()));
+//                }
+//            }
+
+        if (record.getOperation().equals(Operation.INSERT) || record.getOperation().equals(Operation.UPDATE) ||
+                record.getOperation().equals(Operation.DELETE))  {
+            if (!physic2logicTableMapper.containsKey(record.getObjectName())) {
+                log.info("Cannot find logic db table for " + record.getObjectName() + ", refreshing dbList now");
+                try {
+                    retryUtil.callFunctionWithRetry(
+                            () -> {
+                                refreshDbList();
+                            }
+                    );
+                }  catch (Exception e) {
+                    log.error("Error getting dbList:" + e);
+                }
+            }
+            record.setObjectName(physic2logicTableMapper.get(record.getObjectName()));
+        }
+        return record;
     }
 
     public static boolean isMapping() {
