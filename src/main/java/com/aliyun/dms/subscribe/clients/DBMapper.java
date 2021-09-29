@@ -117,7 +117,9 @@ public class DBMapper {
                 log.info("Cannot find logic db table for " + record.getObjectName() + ", refreshing dbList now");
                 try {
                     retryUtil.callFunctionWithRetry(
-                            (RetryUtil.ThrowableFunctionVoid) DBMapper::refreshDbList
+                            () -> {
+                                refreshDbList();
+                            }
                     );
                 }  catch (Exception e) {
                     log.error("Error getting dbList:" + e);
