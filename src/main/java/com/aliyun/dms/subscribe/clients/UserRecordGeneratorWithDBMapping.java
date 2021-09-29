@@ -1,22 +1,17 @@
-package com.aliyun.dts.subscribe.clients.recordgenerator;
+package com.aliyun.dms.subscribe.clients;
 
 import com.aliyun.dts.subscribe.clients.ConsumerContext;
 import com.aliyun.dts.subscribe.clients.common.Checkpoint;
-import com.aliyun.dts.subscribe.clients.record.DefaultUserRecord;
-import com.aliyun.dts.subscribe.clients.common.WorkThread;
 import com.aliyun.dts.subscribe.clients.formats.avro.Record;
+import com.aliyun.dts.subscribe.clients.record.DefaultUserRecord;
 import com.aliyun.dts.subscribe.clients.recordfetcher.OffsetCommitCallBack;
+import com.aliyun.dts.subscribe.clients.recordgenerator.UserRecordGenerator;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.metrics.Metrics;
-import org.apache.kafka.common.metrics.Sensor;
-import org.apache.kafka.common.metrics.stats.SimpleRate;
-import org.apache.kafka.common.metrics.stats.Total;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.Closeable;
-import java.io.IOException;
+
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -25,51 +20,13 @@ import static com.aliyun.dts.subscribe.clients.common.Util.sleepMS;
 /**
  * This class is to resolve avro record deserialize from bytes to UserRecord
  */
-public class UserRecordGenerator implements Runnable, Closeable {
-    private static final Logger log = LoggerFactory.getLogger(UserRecordGenerator.class);
+public class UserRecordGeneratorWithDBMapping extends UserRecordGenerator {
+    private static final Logger log = LoggerFactory.getLogger(UserRecordGeneratorWithDBMapping.class);
 
-    protected ConsumerContext consumerContext;
-    protected final LinkedBlockingQueue<ConsumerRecord> toProcessRecord;
-    protected final AvroDeserializer fastDeserializer;
-
-    protected final LinkedBlockingQueue<DefaultUserRecord> processedRecord;
-
-    protected volatile Checkpoint commitCheckpoint;
-    protected WorkThread commitThread;
-    protected final OffsetCommitCallBack offsetCommitCallBack;
-
-    protected Metrics metrics;
-
-    protected final Sensor recordStoreOutCountSensor;
-    protected final Sensor recordStoreOutByteSensor;
-
-    public UserRecordGenerator(ConsumerContext consumerContext, LinkedBlockingQueue<ConsumerRecord> toProcessRecord, LinkedBlockingQueue<DefaultUserRecord> processedRecord,
-                               OffsetCommitCallBack offsetCommitCallBack) {
-        this.consumerContext = consumerContext;
-        this.toProcessRecord = toProcessRecord;
-        this.fastDeserializer = new AvroDeserializer();
-        this.processedRecord = processedRecord;
-
-        this.offsetCommitCallBack = offsetCommitCallBack;
-
-        commitCheckpoint = new Checkpoint(null, -1, -1, "-1");
-
-        metrics = consumerContext.getDtsMetrics().getCoreMetrics();
-
-        metrics.addMetric(
-                metrics.metricName("DStoreRecordQueue", "UserRecordGenerator"),
-                (config, now) -> (toProcessRecord.size()));
-
-        metrics.addMetric(
-                metrics.metricName("DefaultUserRecordQueue", "UserRecordGenerator"),
-                (config, now) -> (processedRecord.size()));
-
-        this.recordStoreOutCountSensor = metrics.sensor("record-store-out-row");
-        this.recordStoreOutCountSensor.add(metrics.metricName("outCounts", "recordstore"), new Total());
-        this.recordStoreOutCountSensor.add(metrics.metricName("outRps", "recordstore"), new SimpleRate());
-        this.recordStoreOutByteSensor = metrics.sensor("record-store-out-byte");
-        this.recordStoreOutByteSensor.add(metrics.metricName("outBytes", "recordstore"), new Total());
-        this.recordStoreOutByteSensor.add(metrics.metricName("outBps", "recordstore"), new SimpleRate());
+    public UserRecordGeneratorWithDBMapping(ConsumerContext consumerContext, LinkedBlockingQueue<ConsumerRecord> toProcessRecord,
+                                            LinkedBlockingQueue<DefaultUserRecord> processedRecord,
+                                            OffsetCommitCallBack offsetCommitCallBack) {
+        super(consumerContext, toProcessRecord, processedRecord, offsetCommitCallBack);
     }
 
     @Override
@@ -94,6 +51,9 @@ public class UserRecordGenerator implements Runnable, Closeable {
                 record = fastDeserializer.deserialize(consumerRecord.value());
                 log.debug("UserRecordGenerator: meet [{}] record type", record.getOperation());
 
+                if (DBMapper.isMapping()) {
+                    record = DBMapper.transform(record);
+                }
                 DefaultUserRecord defaultUserRecord = new DefaultUserRecord(new TopicPartition(consumerRecord.topic(), consumerRecord.partition()), consumerRecord.offset(),
                         record,
                         (tp, commitRecord, offset, metadata) -> {
@@ -117,21 +77,6 @@ public class UserRecordGenerator implements Runnable, Closeable {
                 consumerContext.exit();
             }
         }
-    }
-
-    protected boolean offerRecord(int timeOut, TimeUnit timeUnit, DefaultUserRecord defaultUserRecord) {
-        try {
-            return processedRecord.offer(defaultUserRecord, timeOut, timeUnit);
-        } catch (Exception e) {
-            log.error("UserRecordGenerator: offer record failed, record[" + defaultUserRecord + "], cause " + e.getMessage(), e);
-            return false;
-        }
-    }
-
-    @Override
-    public void close() throws IOException {
-        consumerContext.exit();
-        commitThread.stop();
     }
 
     // user define how to commit

@@ -1,25 +1,26 @@
-package com.aliyun.dts.subscribe.clients;
+package com.aliyun.dms.subscribe.clients;
 
+import com.aliyun.dts.subscribe.clients.AbstractDTSConsumer;
+import com.aliyun.dts.subscribe.clients.ConsumerContext;
 import com.aliyun.dts.subscribe.clients.common.Checkpoint;
-import com.aliyun.dts.subscribe.clients.exception.CriticalException;
 import com.aliyun.dts.subscribe.clients.common.WorkThread;
 import com.aliyun.dts.subscribe.clients.recordfetcher.KafkaRecordFetcher;
 import com.aliyun.dts.subscribe.clients.recordgenerator.UserRecordGenerator;
 import com.aliyun.dts.subscribe.clients.recordprocessor.EtlRecordProcessor;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static com.aliyun.dts.subscribe.clients.common.Util.*;
 
 import java.util.LinkedList;
 import java.util.List;
 
-public class DefaultDTSConsumer extends AbstractDTSConsumer {
-    private static final Logger log = LoggerFactory.getLogger(DefaultDTSConsumer.class);
 
+import static com.aliyun.dts.subscribe.clients.common.Util.sleepMS;
 
+public class DTSConsumerWithDBMapping extends AbstractDTSConsumer {
+    private static final Logger log = LoggerFactory.getLogger(DTSConsumerWithDBMapping.class);
 
-    public DefaultDTSConsumer(ConsumerContext consumerContext) {
+    public DTSConsumerWithDBMapping(ConsumerContext consumerContext) {
         super(consumerContext);
     }
 
@@ -31,7 +32,7 @@ public class DefaultDTSConsumer extends AbstractDTSConsumer {
 
         if (!checkResult) {
             log.error("DTS precheck failed, dts consumer exit.");
-            throw new CriticalException("DTS precheck failed, dts consumer exit.");
+            return;
         }
 
         synchronized (this) {
@@ -42,7 +43,8 @@ public class DefaultDTSConsumer extends AbstractDTSConsumer {
 
             KafkaRecordFetcher recordFetcher = new KafkaRecordFetcher(consumerContext, toProcessRecords);
 
-            UserRecordGenerator userRecordGenerator = new UserRecordGenerator(consumerContext, toProcessRecords, defaultUserRecords,
+            UserRecordGeneratorWithDBMapping userRecordGenerator = new UserRecordGeneratorWithDBMapping(consumerContext, toProcessRecords,
+                    defaultUserRecords,
                     (tp, timestamp, offset, metadata) -> recordFetcher.setToCommitCheckpoint(new Checkpoint(tp, timestamp, offset, metadata)));
 
             //processor
@@ -62,7 +64,7 @@ public class DefaultDTSConsumer extends AbstractDTSConsumer {
         }
     }
 
-    private static List<WorkThread> startWorker(EtlRecordProcessor etlRecordProcessor, UserRecordGenerator userRecordGenerator, KafkaRecordFetcher recordGenerator) {
+    private static List<WorkThread> startWorker(EtlRecordProcessor etlRecordProcessor, UserRecordGeneratorWithDBMapping userRecordGenerator, KafkaRecordFetcher recordGenerator) {
         List<WorkThread> ret = new LinkedList<>();
         ret.add(new WorkThread(etlRecordProcessor, EtlRecordProcessor.class.getName()));
         ret.add(new WorkThread(userRecordGenerator, UserRecordGenerator.class.getName()));
@@ -72,5 +74,5 @@ public class DefaultDTSConsumer extends AbstractDTSConsumer {
         }
         return ret;
     }
-
 }
+
