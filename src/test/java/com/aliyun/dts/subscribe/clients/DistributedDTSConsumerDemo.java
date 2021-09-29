@@ -38,7 +38,10 @@ public class DistributedDTSConsumerDemo {
 
     public DistributedDTSConsumerDemo(String username, String password,
                                       ConsumerContext.ConsumerSubscribeMode subscribeMode, String dProxy,
-                                      String checkpoint, boolean isForceUseInitCheckpoint, boolean mapping) {
+                                      String checkpoint, boolean isForceUseInitCheckpoint, boolean mapping,
+                                      String region, String groupId, String sid, String dtsInstanceId, String accessKeyId, String secret) throws ClientException {
+
+        getSubscribeSubJobs(region, groupId, sid, dtsInstanceId, accessKeyId, secret);
         DBMapper.setMapping(mapping);
         DBMapper.init(dbLists);
 
@@ -62,40 +65,14 @@ public class DistributedDTSConsumerDemo {
 
         return dmsConsumer;
     }
-    public static Map<String, RecordListener> buildRecordListener() {
-        // user can impl their own listener
-        RecordListener mysqlRecordPrintListener = new RecordListener() {
-            @Override
-            public void consume(DefaultUserRecord record) {
-
-                OperationType operationType = record.getOperationType();
-
-                if(operationType.equals(OperationType.INSERT)
-                        || operationType.equals(OperationType.UPDATE)
-                        || operationType.equals(OperationType.DELETE)
-                        || operationType.equals(OperationType.HEARTBEAT)) {
-
-                    // consume record
-                    RecordListener recordPrintListener = new DefaultRecordPrintListener(DbType.MySQL);
-
-                    recordPrintListener.consume(record);
-
-                    //commit method push the checkpoint update
-                    record.commit("");
-                }
-            }
-        };
-        return Collections.singletonMap("mysqlRecordPrinter", mysqlRecordPrintListener);
-    }
 
     public void start() {
         distributedDTSConsumer.start();
     }
 
-
-    public static void getSubscribeSubJobs(String region, String groupId, String sid, String dtsInstanceId) throws ClientException {
+    public static void getSubscribeSubJobs(String region, String groupId, String sid, String dtsInstanceId, String accessKeyId, String secret) throws ClientException {
         // fill your akId and secret here
-        DefaultProfile profile = DefaultProfile.getProfile("", "", "");
+        DefaultProfile profile = DefaultProfile.getProfile(region, accessKeyId, secret);
         IAcsClient client = new DefaultAcsClient(profile);
         DescribeDtsJobsRequest request = new DescribeDtsJobsRequest();
 
@@ -122,24 +99,56 @@ public class DistributedDTSConsumerDemo {
         DBMapper.setDescribeSubscriptionMetaRequest(req);
     }
 
+    public static Map<String, RecordListener> buildRecordListener() {
+        // user can impl their own listener
+        RecordListener mysqlRecordPrintListener = new RecordListener() {
+            @Override
+            public void consume(DefaultUserRecord record) {
+
+                OperationType operationType = record.getOperationType();
+
+                if(operationType.equals(OperationType.INSERT)
+                        || operationType.equals(OperationType.UPDATE)
+                        || operationType.equals(OperationType.DELETE)
+                        || operationType.equals(OperationType.HEARTBEAT)) {
+
+                    // consume record
+                    RecordListener recordPrintListener = new DefaultRecordPrintListener(DbType.MySQL);
+
+                    recordPrintListener.consume(record);
+
+                    //commit method push the checkpoint update
+                    record.commit("");
+                }
+            }
+        };
+        return Collections.singletonMap("mysqlRecordPrinter", mysqlRecordPrintListener);
+    }
+
     public static void main(String[] args) throws ClientException {
-        String region = "";
-        String groupId = "";
-        String sid = "";
-        String dtsInstanceId = "";
-        getSubscribeSubJobs(region, groupId, sid, dtsInstanceId);
 
-        String userName = "";
-        String password = "";
-        String dProxy = "";
-        String checkpoint = "";
+        String groupId = "your groupId";
+        String dtsInstanceId = "your dtsInstance id";
+        String region = "region e.g cn-hangzhou";
+        String accessKeyId = "your access key id";
+        String secret = "your access key secret";
+
+        // user password and sid for auth
+        String sid = "sid of your consumer group";
+        String userName = "username of consumer group";
+        String password = "password of consumer group";
+        String dProxy = "your broke url";
+        // initial checkpoint for first seek(a timestamp to set, eg 1566180200 if you want (Mon Aug 19 10:03:21 CST 2019))
+        String checkpoint = "start timestamp";
+        // mapping physic db/table to logic db/table
         boolean mapping = true;
-
+        // when use subscribe mode, group config is required. kafka consumer group is enabled
         ConsumerContext.ConsumerSubscribeMode subscribeMode = ConsumerContext.ConsumerSubscribeMode.ASSIGN;
+        // if force use config checkpoint when start. for checkpoint reset, only assign mode works
         boolean isForceUseInitCheckpoint = false;
 
         DistributedDTSConsumerDemo demo = new DistributedDTSConsumerDemo(userName, password,  subscribeMode, dProxy,
-                checkpoint, isForceUseInitCheckpoint, mapping);
+                checkpoint, isForceUseInitCheckpoint, mapping, region, groupId, sid, dtsInstanceId, accessKeyId, secret);
         demo.start();
     }
 }
