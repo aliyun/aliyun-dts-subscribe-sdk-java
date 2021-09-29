@@ -3,6 +3,7 @@ package com.aliyun.dts.subscribe.clients;
 import com.aliyun.dts.subscribe.clients.check.*;
 import com.aliyun.dts.subscribe.clients.common.Checkpoint;
 import com.aliyun.dts.subscribe.clients.common.RecordListener;
+import com.aliyun.dts.subscribe.clients.exception.CriticalException;
 import com.aliyun.dts.subscribe.clients.record.DefaultUserRecord;
 import com.aliyun.dts.subscribe.clients.common.WorkThread;
 import com.aliyun.dts.subscribe.clients.recordfetcher.KafkaRecordFetcher;
@@ -49,7 +50,7 @@ public class DefaultDTSConsumer implements DTSConsumer {
 
         if (!checkResult) {
             log.error("DTS precheck failed, dts consumer exit.");
-            return;
+            throw new CriticalException("DTS precheck failed, dts consumer exit.");
         }
 
         synchronized (this) {
