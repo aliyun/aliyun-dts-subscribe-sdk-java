@@ -71,7 +71,9 @@ public class KafkaRecordFetcher implements Runnable, Closeable {
         this.tryBackTimeMS = 10000;
 
         //existed = false;
-        metaStoreCenter.registerStore(composeLocalFileStoreName(LOCAL_FILE_STORE_NAME, groupID), new LocalFileMetaStore(composeLocalFileStoreName(LOCAL_FILE_STORE_NAME, groupID)));
+        if (consumerContext.isUseLocalCheckpointStore()) {
+            metaStoreCenter.registerStore(composeLocalFileStoreName(LOCAL_FILE_STORE_NAME, groupID), new LocalFileMetaStore(composeLocalFileStoreName(LOCAL_FILE_STORE_NAME, groupID)));
+        }
 
         if (consumerContext.getUserRegisteredStore() != null) {
             metaStoreCenter.registerStore(USER_STORE_NAME, consumerContext.getUserRegisteredStore());

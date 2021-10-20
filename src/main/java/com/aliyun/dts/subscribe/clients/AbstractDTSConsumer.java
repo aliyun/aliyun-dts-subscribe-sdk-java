@@ -101,4 +101,10 @@ public abstract class AbstractDTSConsumer implements DTSConsumer {
         }
         return properties;
     }
+
+    @Override
+    public void close() {
+        this.consumerContext.exit();
+
+    }
 }
