@@ -37,6 +37,8 @@ public class ConsumerContext {
 
     private AtomicBoolean exited = new AtomicBoolean(false);
 
+    private boolean useLocalCheckpointStore = true;
+
     public ConsumerContext(String brokerUrl, String topic, String sid, String userName, String password,
                            String initialCheckpoint, ConsumerContext.ConsumerSubscribeMode subscribeMode) {
         properties = new Properties();
@@ -48,6 +50,7 @@ public class ConsumerContext {
         this.initialCheckpoint = initialCheckpoint;
         this.subscribeMode = subscribeMode;
         this.dtsMetrics = new DTSMetrics();
+        this.useLocalCheckpointStore = true;
     }
 
     public boolean isExited() {
@@ -172,6 +175,14 @@ public class ConsumerContext {
 
     public DTSMetrics getDtsMetrics() {
         return dtsMetrics;
+    }
+
+    public boolean isUseLocalCheckpointStore() {
+        return useLocalCheckpointStore;
+    }
+
+    public void setUseLocalCheckpointStore(boolean useLocalCheckpointStore) {
+        this.useLocalCheckpointStore = useLocalCheckpointStore;
     }
 
     public enum ConsumerSubscribeMode {

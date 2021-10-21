@@ -10,7 +10,7 @@
     <packaging>jar</packaging>
     <groupId>com.aliyun.dts</groupId>
     <artifactId>dts-new-subscribe-sdk</artifactId>
-    <version>1.3.4</version>
+    <version>1.3.6</version>
 
     <!-- licenses, licenses, scm tags are needed by public maven deploying-->
     <licenses>
@@ -41,21 +41,6 @@
 
 
     <dependencies>
-        <dependency>
-            <groupId>com.aliyun</groupId>
-            <artifactId>aliyun-java-sdk-core-lx</artifactId>
-            <version>1.0.6</version>
-            <exclusions>
-                <exclusion>
-                    <artifactId>sourceforge.spring</artifactId>
-                    <groupId>com.alibaba.external</groupId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.mortbay.jetty</groupId>
-                    <artifactId>servlet-api</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
         <dependency>
             <groupId>org.apache.avro</groupId>
             <artifactId>avro</artifactId>
@@ -105,17 +90,12 @@
         <dependency>
             <groupId>com.aliyun</groupId>
             <artifactId>aliyun-java-sdk-core</artifactId>
-            <version>4.5.18-SNAPSHOT</version>
+            <version>4.5.18</version>
         </dependency>
         <dependency>
             <groupId>com.aliyun</groupId>
             <artifactId>aliyun-java-sdk-dts</artifactId>
             <version>5.1.18</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.tomcat.embed</groupId>
-            <artifactId>tomcat-embed-core</artifactId>
-            <version>9.0.37</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
