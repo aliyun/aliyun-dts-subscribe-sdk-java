@@ -53,7 +53,9 @@ public class SubscribeAuthChecker implements SubscribeChecker {
 
             this.commandClient = new NodeCommandClient.CommandClient(config);
 
-            MetadataResponse metadataResponse = commandClient.fetchMetadata();
+            MetadataResponse metadataResponse = retryUtil.callFunctionWithRetry(
+                    () -> commandClient.fetchMetadata()
+            );
 
             Collection<Node> nodes = metadataResponse.brokers();
 
