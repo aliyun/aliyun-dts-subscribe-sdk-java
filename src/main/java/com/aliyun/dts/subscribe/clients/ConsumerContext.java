@@ -43,16 +43,7 @@ public class ConsumerContext {
 
     public ConsumerContext(String brokerUrl, String topic, String sid, String userName, String password,
                            String initialCheckpoint, ConsumerContext.ConsumerSubscribeMode subscribeMode) {
-        properties = new Properties();
-        this.brokerUrl = brokerUrl;
-        this.topic = topic;
-        this.sid = sid;
-        this.user = userName;
-        this.password = password;
-        this.initialCheckpoint = initialCheckpoint;
-        this.subscribeMode = subscribeMode;
-        this.dtsMetrics = new DTSMetrics();
-        this.useLocalCheckpointStore = true;
+        this(null, brokerUrl, topic, sid, userName, password, initialCheckpoint, subscribeMode);
     }
 
     public ConsumerContext(DBMapper dbMapper, String brokerUrl, String topic, String sid, String userName, String password,

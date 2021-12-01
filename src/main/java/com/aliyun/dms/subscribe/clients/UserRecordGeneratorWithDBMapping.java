@@ -51,7 +51,7 @@ public class UserRecordGeneratorWithDBMapping extends UserRecordGenerator {
                 record = fastDeserializer.deserialize(consumerRecord.value());
                 log.debug("UserRecordGenerator: meet [{}] record type", record.getOperation());
 
-                if (consumerContext.getDbMapper().isMapping()) {
+                if (consumerContext.getDbMapper() != null && consumerContext.getDbMapper().isMapping()) {
                     record = consumerContext.getDbMapper().transform(record);
                 }
                 DefaultUserRecord defaultUserRecord = new DefaultUserRecord(new TopicPartition(consumerRecord.topic(), consumerRecord.partition()), consumerRecord.offset(),

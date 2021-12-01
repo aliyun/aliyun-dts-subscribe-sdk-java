@@ -17,6 +17,7 @@ import com.aliyuncs.dts.model.v20200101.DescribeSubscriptionMetaRequest;
 import com.aliyuncs.dts.model.v20200101.DescribeSubscriptionMetaResponse;
 import com.aliyuncs.exceptions.ClientException;
 import com.aliyuncs.profile.DefaultProfile;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -118,6 +119,10 @@ public class DistributedDTSConsumerDemo {
             for (DescribeSubscriptionMetaResponse.SubscriptionMetaListItem meta : (res).getSubscriptionMetaList()) {
                 topic2Sid.put(meta.getTopic(), meta.getSid());
                 dbLists.add(meta.getDBList());
+
+                if (StringUtils.isEmpty(meta.getDBList())) {
+                    log.warn("dbList is null, sid:" + sid + ",dtsInstanceId:" + dtsInstanceId + ",subMigrationJobIds:" + String.join(",", subMigrationJobIds));
+                }
             }
         }
         dbMapper.setClient(client);
