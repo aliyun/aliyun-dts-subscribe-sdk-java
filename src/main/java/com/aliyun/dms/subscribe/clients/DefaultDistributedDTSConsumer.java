@@ -33,7 +33,7 @@ public class DefaultDistributedDTSConsumer implements DistributedDTSConsumer {
     }
 
 
-    public void init(Map<String, String> topic2checkpoint, String dProxy, Map<String, String> topic2Sid, String username, String password,
+    public void init(Map<String, String> topic2checkpoint, DBMapper dbMapper, String dProxy, Map<String, String> topic2Sid, String username, String password,
                      ConsumerContext.ConsumerSubscribeMode subscribeMode, boolean isForceUseInitCheckpoint,
         MetaStore<Checkpoint> userRegisteredStore, Map<String, RecordListener> recordListeners) {
 
@@ -42,7 +42,7 @@ public class DefaultDistributedDTSConsumer implements DistributedDTSConsumer {
 
         for (Map.Entry<String, String> topicCheckpoint: topic2checkpoint.entrySet()) {
 
-            ConsumerContext consumerContext = new ConsumerContext(dProxy, topicCheckpoint.getKey(), topic2Sid.get(topicCheckpoint.getKey()), username, password,
+            ConsumerContext consumerContext = new ConsumerContext(dbMapper, dProxy, topicCheckpoint.getKey(), topic2Sid.get(topicCheckpoint.getKey()), username, password,
                     topicCheckpoint.getValue(), subscribeMode);
             consumerContext.setUserRegisteredStore(userRegisteredStore);
             consumerContext.setForceUseCheckpoint(isForceUseInitCheckpoint);

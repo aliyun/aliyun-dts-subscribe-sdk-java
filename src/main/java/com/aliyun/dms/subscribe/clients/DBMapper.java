@@ -18,35 +18,26 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class DBMapper {
-    private static final Logger log = LoggerFactory.getLogger(DBMapper.class);
+    private final Logger log = LoggerFactory.getLogger(DBMapper.class);
 
-    // Object = Map<PhysicDB，Map<LogicTable, List<PhysicTable>>>
-    // Map<LogicDB, List<Object>>
-   // Map<PhicDB, LogicDB>
+    private Map<String, String> physic2logicDBMapper = new HashMap<>();
+    private Map<String, String> physic2logicTableMapper = new HashMap<>();
+    private boolean mapping = true;
 
+    private IAcsClient iAcsClient;
+    private DescribeSubscriptionMetaRequest describeSubscriptionMetaRequest;
 
-    // Map<LogicDB, Map<PhysicDB, Map<LogicTable, PhysicTable>>>
-    private static Map<String, Map<String, Map<String, String>>> logic2PhysicDBMapper;
-    private static Map<String, String> physic2logicDBMapper = new HashMap<>();
-    private static Map<String, String> physic2logicTableMapper = new HashMap<>();
-    private static boolean mapping = true;
-    // map logic dbname to a map stored table name mapping
-  //  private static Map<String, Map<String, String>> db2tbMapper;
+    private RetryUtil retryUtil = new RetryUtil(4, TimeUnit.SECONDS, 15, (e) -> true);
 
-    private static IAcsClient iAcsClient;
-    private static DescribeSubscriptionMetaRequest describeSubscriptionMetaRequest;
-
-    private static RetryUtil retryUtil = new RetryUtil(4, TimeUnit.SECONDS, 15, (e) -> true);
-
-    public static void setClient(IAcsClient client) {
+    public void setClient(IAcsClient client) {
         iAcsClient = client;
     }
 
-    public static void setDescribeSubscriptionMetaRequest(DescribeSubscriptionMetaRequest describeSubscriptionMetaRequest) {
-        DBMapper.describeSubscriptionMetaRequest = describeSubscriptionMetaRequest;
+    public void setDescribeSubscriptionMetaRequest(DescribeSubscriptionMetaRequest describeSubscriptionMetaRequest) {
+        this.describeSubscriptionMetaRequest = describeSubscriptionMetaRequest;
     }
 
-    public static synchronized void init(String dbListString) {
+    public synchronized void init(String dbListString) {
         JSONObject dbList = JSONObject.parseObject(dbListString);
         for (Map.Entry<String, Object> entry: dbList.entrySet()) {
             String physicDb = entry.getKey();
@@ -62,40 +53,20 @@ public class DBMapper {
         }
     }
 
-    public static void init(List<String> dbLists) {
+    public void init(List<String> dbLists) {
         for (String dbList: dbLists) {
-            DBMapper.init(dbList);
-        }
-    }
-    public static void init(Map<String, Map<String, Map<String, String>>> dbmapper, boolean map) {
-        logic2PhysicDBMapper = dbmapper;
-        mapping = map;
-
-        for (Map.Entry<String, Map<String, Map<String, String>>> entry: logic2PhysicDBMapper.entrySet()) {
-            String logicDB = entry.getKey();
-
-            for (Map.Entry<String, Map<String, String>> db2Tb: entry.getValue().entrySet()) {
-                String physicDB = db2Tb.getKey();
-                physic2logicDBMapper.put(physicDB, logicDB);
-
-                Map<String, Map<String, String>> logic2tbmapper = new HashMap<>();
-                for (Map.Entry<String, String> tbEntry: db2Tb.getValue().entrySet()) {
-                    String logicTb = tbEntry.getKey();
-                    String physicTb = tbEntry.getValue();
-
-                    physic2logicTableMapper.put(physicDB + "." + physicTb, logicDB + "." + logicTb);
-                }
-            }
+            init(dbList);
         }
     }
 
-    public static boolean refreshDbList() throws ClientException {
+    public boolean refreshDbList() throws ClientException {
         List<String> dbLists = new ArrayList<>();
-        DescribeSubscriptionMetaResponse res = iAcsClient.getAcsResponse(describeSubscriptionMetaRequest);
+        DescribeSubscriptionMetaResponse res = iAcsClient.getAcsResponse(this.describeSubscriptionMetaRequest);
         boolean success =  res.getSuccess().equalsIgnoreCase("true");
         if (success) {
             for (DescribeSubscriptionMetaResponse.SubscriptionMetaListItem meta: (res).getSubscriptionMetaList()) {
                 dbLists.add(meta.getDBList());
+                log.debug("refresh dbList:" + meta.getDBList());
             }
             init(dbLists);
         }
@@ -103,7 +74,7 @@ public class DBMapper {
 
     }
 
-    public static Record transform(Record record)  {
+    public Record transform(Record record)  {
         // do not support ddl for now
 //            if (record.getOperation().equals(Operation.DDL)) {
 //                if (physic2logicDBMapper.containsKey(record.getObjectName())) {
@@ -130,15 +101,12 @@ public class DBMapper {
         return record;
     }
 
-    public static boolean isMapping() {
+    public boolean isMapping() {
         return mapping;
     }
 
-    public static void setMapping(boolean mapping) {
-        DBMapper.mapping = mapping;
+    public void setMapping(boolean mapping) {
+        this.mapping = mapping;
     }
 
-//    public static void main(String[] args) {
-//        init("{\"dts_h02\":{\"all\":false,\"name\":\"dts_h\",\"Table\":{\"dtsh27_02\":{\"all\":true,\"name\":\"dtsh\"},\"dts28_01\":{\"all\":true,\"name\":\"dts\"},\"dts28_02\":{\"all\":true,\"name\":\"dts\"}}},\"dts_h01\":{\"all\":false,\"name\":\"dts_h\",\"Table\":{\"dtsh27_01\":{\"all\":true,\"name\":\"dtsh\"},\"dts29_02\":{\"all\":true,\"name\":\"dts\"},\"dts29_01\":{\"all\":true,\"name\":\"dts\"}}}}");
-//    }
 }

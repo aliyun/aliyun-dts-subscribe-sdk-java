@@ -1,5 +1,6 @@
 package com.aliyun.dts.subscribe.clients;
 
+import com.aliyun.dms.subscribe.clients.DBMapper;
 import com.aliyun.dts.subscribe.clients.common.Checkpoint;
 import com.aliyun.dts.subscribe.clients.common.Util;
 import com.aliyun.dts.subscribe.clients.metastore.MetaStore;
@@ -15,6 +16,7 @@ import static com.aliyun.dts.subscribe.clients.recordfetcher.Names.*;
 public class ConsumerContext {
     private Properties properties;
 
+    private DBMapper dbMapper;
     private String brokerUrl;
     private String topic;
     private String sid;
@@ -41,7 +43,13 @@ public class ConsumerContext {
 
     public ConsumerContext(String brokerUrl, String topic, String sid, String userName, String password,
                            String initialCheckpoint, ConsumerContext.ConsumerSubscribeMode subscribeMode) {
+        this(null, brokerUrl, topic, sid, userName, password, initialCheckpoint, subscribeMode);
+    }
+
+    public ConsumerContext(DBMapper dbMapper, String brokerUrl, String topic, String sid, String userName, String password,
+                           String initialCheckpoint, ConsumerContext.ConsumerSubscribeMode subscribeMode) {
         properties = new Properties();
+        this.dbMapper = dbMapper;
         this.brokerUrl = brokerUrl;
         this.topic = topic;
         this.sid = sid;
@@ -51,6 +59,14 @@ public class ConsumerContext {
         this.subscribeMode = subscribeMode;
         this.dtsMetrics = new DTSMetrics();
         this.useLocalCheckpointStore = true;
+    }
+
+    public DBMapper getDbMapper() {
+        if (this.dbMapper == null) {
+            this.dbMapper = new DBMapper();
+            this.dbMapper.setMapping(false);
+        }
+        return this.dbMapper;
     }
 
     public boolean isExited() {
