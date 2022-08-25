@@ -2,7 +2,7 @@ package com.aliyun.dts.subscribe.clients.record.value;
 
 public enum ObjectType {
 
-    BINARY, BOOL, BLOB, XML, JSON, TEXT, BFILE, RAW, LONG_RAW, ROWID, UROWID, ENUM, SET, BYTEA, GEOMETRY, XTYPE;
+    BINARY, BOOL, BLOB, XML, JSON, TEXT, BFILE, RAW, LONG_RAW, ROWID, UROWID, ENUM, SET, BYTEA, GEOMETRY, XTYPE, UUID;
 
     public static ObjectType parse(String type) {
 
