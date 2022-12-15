@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import java.util.Properties;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -32,10 +33,17 @@ public class DefaultDistributedDTSConsumer implements DistributedDTSConsumer {
         dtsConsumers.add(consumer);
     }
 
+    public void init(Map<String, String> topic2checkpoint, DBMapper dbMapper, String dProxy, Map<String, String> topic2Sid, String username, String password,
+                     ConsumerContext.ConsumerSubscribeMode subscribeMode, boolean isForceUseInitCheckpoint,
+                     MetaStore<Checkpoint> userRegisteredStore, Map<String, RecordListener> recordListeners) {
+
+        this.init(topic2checkpoint, dbMapper, dProxy, topic2Sid, username, password, subscribeMode,
+                isForceUseInitCheckpoint, userRegisteredStore, recordListeners, new Properties());
+    }
 
     public void init(Map<String, String> topic2checkpoint, DBMapper dbMapper, String dProxy, Map<String, String> topic2Sid, String username, String password,
                      ConsumerContext.ConsumerSubscribeMode subscribeMode, boolean isForceUseInitCheckpoint,
-        MetaStore<Checkpoint> userRegisteredStore, Map<String, RecordListener> recordListeners) {
+                     MetaStore<Checkpoint> userRegisteredStore, Map<String, RecordListener> recordListeners, Properties properties) {
 
         this.executor = new ThreadPoolExecutor(corePoolSize, maximumPoolSize, 1000 * 60,
             TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>());
@@ -43,7 +51,7 @@ public class DefaultDistributedDTSConsumer implements DistributedDTSConsumer {
         for (Map.Entry<String, String> topicCheckpoint: topic2checkpoint.entrySet()) {
 
             ConsumerContext consumerContext = new ConsumerContext(dbMapper, dProxy, topicCheckpoint.getKey(), topic2Sid.get(topicCheckpoint.getKey()), username, password,
-                    topicCheckpoint.getValue(), subscribeMode);
+                    topicCheckpoint.getValue(), subscribeMode, properties);
             consumerContext.setUserRegisteredStore(userRegisteredStore);
             consumerContext.setForceUseCheckpoint(isForceUseInitCheckpoint);
 
@@ -60,6 +68,7 @@ public class DefaultDistributedDTSConsumer implements DistributedDTSConsumer {
                 executor.submit(consumer::start);
             } catch (Exception e) {
                 LOG.error("error starting consumer:" + e);
+                shutdownGracefully(10, TimeUnit.SECONDS);
             }
         }
     }
