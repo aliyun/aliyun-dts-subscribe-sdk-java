@@ -43,12 +43,12 @@ public class ConsumerContext {
 
     public ConsumerContext(String brokerUrl, String topic, String sid, String userName, String password,
                            String initialCheckpoint, ConsumerContext.ConsumerSubscribeMode subscribeMode) {
-        this(null, brokerUrl, topic, sid, userName, password, initialCheckpoint, subscribeMode);
+        this(null, brokerUrl, topic, sid, userName, password, initialCheckpoint, subscribeMode, new Properties());
     }
 
     public ConsumerContext(DBMapper dbMapper, String brokerUrl, String topic, String sid, String userName, String password,
-                           String initialCheckpoint, ConsumerContext.ConsumerSubscribeMode subscribeMode) {
-        properties = new Properties();
+                           String initialCheckpoint, ConsumerContext.ConsumerSubscribeMode subscribeMode, Properties properties) {
+        this.properties = properties;
         this.dbMapper = dbMapper;
         this.brokerUrl = brokerUrl;
         this.topic = topic;
