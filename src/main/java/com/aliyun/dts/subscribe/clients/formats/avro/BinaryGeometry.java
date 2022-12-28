@@ -41,10 +41,6 @@ public class BinaryGeometry extends org.apache.avro.specific.SpecificRecordBase 
     return new BinaryMessageDecoder<BinaryGeometry>(MODEL$, SCHEMA$, resolver);
   }
 
-  /** Serializes this BinaryGeometry to a ByteBuffer.
-   * @throws IOException
-   * @return ByteBuffer
-  */
   public java.nio.ByteBuffer toByteBuffer() throws java.io.IOException {
     return ENCODER.encode(this);
   }

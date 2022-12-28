@@ -10,7 +10,7 @@ public interface RowImage {
 
     /**
      * <p>
-     * Returns a view of the the values of the fields in this Record. Note that this method returns values only for
+     * @return a view of the the values of the fields in this Record. Note that this method returns values only for
      * those entries in the Record's schema. This allows the Record to guarantee that it will return the values in
      * the order dictated by the schema.
      * </p>
@@ -22,45 +22,50 @@ public interface RowImage {
     Value[] getValues();
 
     /**
-     * Return the value of specified @pos.
+     * @param pos the position of the value
+     * @return the value of specified @pos.
      */
     Value getValue(int pos);
 
     /**
-     * Return the value of specified @fieldName.
+     * @param fieldName the field name
+     * @return the value of specified @fieldName.
      * This method is different as other getValue, for the field matched @fileName should never exist.
      */
     Value getValue(String fieldName);
 
     /**
-     * Return the value of specified @recordField.
+     * @param recordField record filed
+     * @return the value of specified @recordField.
      */
     Value getValue(RecordField recordField);
 
     /**
-     * Return the primary keys of current row image.
+     * @return the primary keys of current row image.
      */
     Pair<RecordField, Value>[] getPrimaryKeyValues();
 
     /**
-     * Return the merged field and value pairs fo all unique keys in current record.
+     * @return the merged field and value pairs fo all unique keys in current record.
      */
     Pair<RecordField, Value>[] getUniqueKeyValues();
 
     /**
-     * Return the foreign keys of current row image.
+     * @return the foreign keys of current row image.
      */
     Pair<RecordField, Value>[] getForeignKeyValues();
 
     /**
      * Converts the Record into a Map whose keys are the same as the Record's field names and the values are the field values
-     *
+     * @param filedNameResolver field name resolver
+     * @param valueResolver value resolver
      * @return a Map that represents the values in the Record
      */
     Map<String, Value> toMap(Function<String, String> filedNameResolver, Function<Value, Value> valueResolver);
 
     /**
      * The total size of all values in current row image.
+     * @return size
      */
     long size();
 }

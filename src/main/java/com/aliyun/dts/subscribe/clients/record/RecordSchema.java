@@ -23,12 +23,8 @@ public interface RecordSchema {
     int getFieldCount();
 
     /**
-     * @param index
-     *            the 0-based index of which field to return
+     * @param index the 0-based index of which field to return
      * @return the index'th field
-     *
-     * @throws IndexOutOfBoundsException
-     * @return record field
      */
     RecordField getField(int index);
 
@@ -141,7 +137,7 @@ public interface RecordSchema {
 
     /**
      * get the table charset
-     * @return
+     * @return charset
      */
     default String getCharset() {
         return null;
