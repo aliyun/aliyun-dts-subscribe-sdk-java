@@ -25,27 +25,18 @@ public class BinaryObject extends org.apache.avro.specific.SpecificRecordBase im
   private static final BinaryMessageDecoder<BinaryObject> DECODER =
       new BinaryMessageDecoder<BinaryObject>(MODEL$, SCHEMA$);
 
-  /**
-   * Return the BinaryMessageDecoder instance used by this class.
-   */
   public static BinaryMessageDecoder<BinaryObject> getDecoder() {
     return DECODER;
   }
 
-  /**
-   * Create a new BinaryMessageDecoder instance for this class that uses the specified {@link SchemaStore}.
-   * @param resolver a {@link SchemaStore} used to find schemas by fingerprint
-   */
   public static BinaryMessageDecoder<BinaryObject> createDecoder(SchemaStore resolver) {
     return new BinaryMessageDecoder<BinaryObject>(MODEL$, SCHEMA$, resolver);
   }
 
-  /** Serializes this BinaryObject to a ByteBuffer. */
   public java.nio.ByteBuffer toByteBuffer() throws java.io.IOException {
     return ENCODER.encode(this);
   }
 
-  /** Deserializes a BinaryObject from a ByteBuffer. */
   public static BinaryObject fromByteBuffer(
       java.nio.ByteBuffer b) throws java.io.IOException {
     return DECODER.decode(b);

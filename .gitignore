@@ -6,5 +6,6 @@ dts-new-subscribe-sdk.ipr
 dts-new-subscribe-sdk.iws
 localCheckpointStore*
 src/test/java/com/aliyun/dts/subscribe/clients/YanmenConsumerDemo.java
+src/test/java/com/aliyun/dts/subscribe/clients/YanmenDistributedDTSConsumerDemo.java
 dts-new-subscribe.log
 

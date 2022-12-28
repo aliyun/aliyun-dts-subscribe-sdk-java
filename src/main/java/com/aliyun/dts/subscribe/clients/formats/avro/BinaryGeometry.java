@@ -26,7 +26,7 @@ public class BinaryGeometry extends org.apache.avro.specific.SpecificRecordBase 
       new BinaryMessageDecoder<BinaryGeometry>(MODEL$, SCHEMA$);
 
   /**
-   * Return the BinaryMessageDecoder instance used by this class.
+   * @return the BinaryMessageDecoder instance used by this class.
    */
   public static BinaryMessageDecoder<BinaryGeometry> getDecoder() {
     return DECODER;
@@ -35,17 +35,20 @@ public class BinaryGeometry extends org.apache.avro.specific.SpecificRecordBase 
   /**
    * Create a new BinaryMessageDecoder instance for this class that uses the specified {@link SchemaStore}.
    * @param resolver a {@link SchemaStore} used to find schemas by fingerprint
+   * @return BinaryMessageDecoder
    */
   public static BinaryMessageDecoder<BinaryGeometry> createDecoder(SchemaStore resolver) {
     return new BinaryMessageDecoder<BinaryGeometry>(MODEL$, SCHEMA$, resolver);
   }
 
-  /** Serializes this BinaryGeometry to a ByteBuffer. */
+  /** Serializes this BinaryGeometry to a ByteBuffer.
+   * @throws IOException
+   * @return ByteBuffer
+  */
   public java.nio.ByteBuffer toByteBuffer() throws java.io.IOException {
     return ENCODER.encode(this);
   }
 
-  /** Deserializes a BinaryGeometry from a ByteBuffer. */
   public static BinaryGeometry fromByteBuffer(
       java.nio.ByteBuffer b) throws java.io.IOException {
     return DECODER.decode(b);

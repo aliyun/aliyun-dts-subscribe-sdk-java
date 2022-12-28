@@ -28,7 +28,6 @@ public interface RecordSchema {
      * @return the index'th field
      *
      * @throws IndexOutOfBoundsException
-     * if the index is {< 0 or >=} the number of fields (determined by {@link #getFieldCount()})
      * @return record field
      */
     RecordField getField(int index);
@@ -93,27 +92,32 @@ public interface RecordSchema {
 
     /**
      * get the primary key info.
+     * @return record index info
      */
     RecordIndexInfo getPrimaryIndexInfo();
 
     /**
      * get all foreign key info, may be the foreign key refers to a primary key with multi cols, so we
      * use RecordIndexInfo to represent it.
+     * @return all foreign key info
      */
     List<ForeignKeyIndexInfo> getForeignIndexInfo();
 
     /**
      * get all unique key info.
+     * @return all unique key info
      */
     List<RecordIndexInfo> getUniqueIndexInfo();
 
     /**
      * get all normal indexes(which means it's not pk, uk and fk).
+     * @return all normal indexes
      */
     List<RecordIndexInfo> getNormalIndexInfo();
 
     /**
      * get the estimated total rows in current record schema.
+     * @return total rows
      */
     default long getTotalRows() {
         return 0L;

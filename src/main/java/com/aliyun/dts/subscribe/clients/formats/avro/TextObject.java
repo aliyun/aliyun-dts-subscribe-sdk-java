@@ -25,27 +25,18 @@ public class TextObject extends org.apache.avro.specific.SpecificRecordBase impl
   private static final BinaryMessageDecoder<TextObject> DECODER =
       new BinaryMessageDecoder<TextObject>(MODEL$, SCHEMA$);
 
-  /**
-   * Return the BinaryMessageDecoder instance used by this class.
-   */
   public static BinaryMessageDecoder<TextObject> getDecoder() {
     return DECODER;
   }
 
-  /**
-   * Create a new BinaryMessageDecoder instance for this class that uses the specified {@link SchemaStore}.
-   * @param resolver a {@link SchemaStore} used to find schemas by fingerprint
-   */
   public static BinaryMessageDecoder<TextObject> createDecoder(SchemaStore resolver) {
     return new BinaryMessageDecoder<TextObject>(MODEL$, SCHEMA$, resolver);
   }
 
-  /** Serializes this TextObject to a ByteBuffer. */
   public java.nio.ByteBuffer toByteBuffer() throws java.io.IOException {
     return ENCODER.encode(this);
   }
 
-  /** Deserializes a TextObject from a ByteBuffer. */
   public static TextObject fromByteBuffer(
       java.nio.ByteBuffer b) throws java.io.IOException {
     return DECODER.decode(b);
