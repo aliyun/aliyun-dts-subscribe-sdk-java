@@ -25,27 +25,18 @@ public class Character extends org.apache.avro.specific.SpecificRecordBase imple
   private static final BinaryMessageDecoder<Character> DECODER =
       new BinaryMessageDecoder<Character>(MODEL$, SCHEMA$);
 
-  /**
-   * Return the BinaryMessageDecoder instance used by this class.
-   */
   public static BinaryMessageDecoder<Character> getDecoder() {
     return DECODER;
   }
 
-  /**
-   * Create a new BinaryMessageDecoder instance for this class that uses the specified {@link SchemaStore}.
-   * @param resolver a {@link SchemaStore} used to find schemas by fingerprint
-   */
   public static BinaryMessageDecoder<Character> createDecoder(SchemaStore resolver) {
     return new BinaryMessageDecoder<Character>(MODEL$, SCHEMA$, resolver);
   }
 
-  /** Serializes this Character to a ByteBuffer. */
   public java.nio.ByteBuffer toByteBuffer() throws java.io.IOException {
     return ENCODER.encode(this);
   }
 
-  /** Deserializes a Character from a ByteBuffer. */
   public static Character fromByteBuffer(
       java.nio.ByteBuffer b) throws java.io.IOException {
     return DECODER.decode(b);

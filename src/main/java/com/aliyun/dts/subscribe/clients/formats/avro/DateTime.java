@@ -25,27 +25,18 @@ public class DateTime extends org.apache.avro.specific.SpecificRecordBase implem
   private static final BinaryMessageDecoder<DateTime> DECODER =
       new BinaryMessageDecoder<DateTime>(MODEL$, SCHEMA$);
 
-  /**
-   * Return the BinaryMessageDecoder instance used by this class.
-   */
   public static BinaryMessageDecoder<DateTime> getDecoder() {
     return DECODER;
   }
 
-  /**
-   * Create a new BinaryMessageDecoder instance for this class that uses the specified {@link SchemaStore}.
-   * @param resolver a {@link SchemaStore} used to find schemas by fingerprint
-   */
   public static BinaryMessageDecoder<DateTime> createDecoder(SchemaStore resolver) {
     return new BinaryMessageDecoder<DateTime>(MODEL$, SCHEMA$, resolver);
   }
 
-  /** Serializes this DateTime to a ByteBuffer. */
   public java.nio.ByteBuffer toByteBuffer() throws java.io.IOException {
     return ENCODER.encode(this);
   }
 
-  /** Deserializes a DateTime from a ByteBuffer. */
   public static DateTime fromByteBuffer(
       java.nio.ByteBuffer b) throws java.io.IOException {
     return DECODER.decode(b);

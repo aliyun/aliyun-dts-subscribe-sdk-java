@@ -25,27 +25,18 @@ public class TimestampWithTimeZone extends org.apache.avro.specific.SpecificReco
   private static final BinaryMessageDecoder<TimestampWithTimeZone> DECODER =
       new BinaryMessageDecoder<TimestampWithTimeZone>(MODEL$, SCHEMA$);
 
-  /**
-   * Return the BinaryMessageDecoder instance used by this class.
-   */
   public static BinaryMessageDecoder<TimestampWithTimeZone> getDecoder() {
     return DECODER;
   }
 
-  /**
-   * Create a new BinaryMessageDecoder instance for this class that uses the specified {@link SchemaStore}.
-   * @param resolver a {@link SchemaStore} used to find schemas by fingerprint
-   */
   public static BinaryMessageDecoder<TimestampWithTimeZone> createDecoder(SchemaStore resolver) {
     return new BinaryMessageDecoder<TimestampWithTimeZone>(MODEL$, SCHEMA$, resolver);
   }
 
-  /** Serializes this TimestampWithTimeZone to a ByteBuffer. */
   public java.nio.ByteBuffer toByteBuffer() throws java.io.IOException {
     return ENCODER.encode(this);
   }
 
-  /** Deserializes a TimestampWithTimeZone from a ByteBuffer. */
   public static TimestampWithTimeZone fromByteBuffer(
       java.nio.ByteBuffer b) throws java.io.IOException {
     return DECODER.decode(b);

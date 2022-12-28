@@ -25,27 +25,18 @@ public class Decimal extends org.apache.avro.specific.SpecificRecordBase impleme
   private static final BinaryMessageDecoder<Decimal> DECODER =
       new BinaryMessageDecoder<Decimal>(MODEL$, SCHEMA$);
 
-  /**
-   * Return the BinaryMessageDecoder instance used by this class.
-   */
   public static BinaryMessageDecoder<Decimal> getDecoder() {
     return DECODER;
   }
 
-  /**
-   * Create a new BinaryMessageDecoder instance for this class that uses the specified {@link SchemaStore}.
-   * @param resolver a {@link SchemaStore} used to find schemas by fingerprint
-   */
   public static BinaryMessageDecoder<Decimal> createDecoder(SchemaStore resolver) {
     return new BinaryMessageDecoder<Decimal>(MODEL$, SCHEMA$, resolver);
   }
 
-  /** Serializes this Decimal to a ByteBuffer. */
   public java.nio.ByteBuffer toByteBuffer() throws java.io.IOException {
     return ENCODER.encode(this);
   }
 
-  /** Deserializes a Decimal from a ByteBuffer. */
   public static Decimal fromByteBuffer(
       java.nio.ByteBuffer b) throws java.io.IOException {
     return DECODER.decode(b);

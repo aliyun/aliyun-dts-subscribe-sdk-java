@@ -25,27 +25,18 @@ public class Record extends org.apache.avro.specific.SpecificRecordBase implemen
   private static final BinaryMessageDecoder<Record> DECODER =
       new BinaryMessageDecoder<Record>(MODEL$, SCHEMA$);
 
-  /**
-   * Return the BinaryMessageDecoder instance used by this class.
-   */
   public static BinaryMessageDecoder<Record> getDecoder() {
     return DECODER;
   }
 
-  /**
-   * Create a new BinaryMessageDecoder instance for this class that uses the specified {@link SchemaStore}.
-   * @param resolver a {@link SchemaStore} used to find schemas by fingerprint
-   */
   public static BinaryMessageDecoder<Record> createDecoder(SchemaStore resolver) {
     return new BinaryMessageDecoder<Record>(MODEL$, SCHEMA$, resolver);
   }
 
-  /** Serializes this Record to a ByteBuffer. */
   public java.nio.ByteBuffer toByteBuffer() throws java.io.IOException {
     return ENCODER.encode(this);
   }
 
-  /** Deserializes a Record from a ByteBuffer. */
   public static Record fromByteBuffer(
       java.nio.ByteBuffer b) throws java.io.IOException {
     return DECODER.decode(b);
