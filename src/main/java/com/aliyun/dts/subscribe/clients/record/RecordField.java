@@ -29,6 +29,7 @@ public interface RecordField {
     boolean isUnique();
 
     /**
+     * @param unique if record field unique
      * @return set if current field is an element of uk.
      */
     RecordField setUnique(boolean unique);
@@ -54,7 +55,8 @@ public interface RecordField {
     int getFieldPosition();
 
     /**
-     * @return Set field position to set/get value, which starts from 0.
+     * @param position
+     * Set field position to set/get value, which starts from 0.
      */
     void setFieldPosition(int position);
 
