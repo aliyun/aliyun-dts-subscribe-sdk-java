@@ -20,14 +20,15 @@
         </license>
     </licenses>
     <scm>
-        <url></url>
-        <connection></connection>
+        <url>https://github.com/aliyun/aliyun-dts-subscribe-sdk-java</url>
+        <connection>scm:git:git@github.com:aliyun/aliyun-dts-subscribe-sdk-java.git</connection>
+        <developerConnection>scm:git:git@github.com:aliyun/aliyun-dts-subscribe-sdk-java.git</developerConnection>
     </scm>
     <developers>
         <developer>
             <id>aliyunproducts</id>
             <name>Aliyun SDK</name>
-            <email></email>
+            <email>aliyunsdk@aliyun.com</email>
         </developer>
     </developers>
 
