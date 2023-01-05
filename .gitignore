@@ -8,4 +8,4 @@ localCheckpointStore*
 src/test/java/com/aliyun/dts/subscribe/clients/YanmenConsumerDemo.java
 src/test/java/com/aliyun/dts/subscribe/clients/YanmenDistributedDTSConsumerDemo.java
 dts-new-subscribe.log
-
+.flattened-pom.xml

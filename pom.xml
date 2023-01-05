@@ -4,143 +4,189 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <name>dts-new-subscribe-sdk</name>
-    <url>https://www.aliyun.com/product/dts</url>
-    <description>The Aliyun new Subscribe SDK for Java used for accessing Data Transmission Service</description>
-    <packaging>jar</packaging>
-    <groupId>com.aliyun.dts</groupId>
-    <artifactId>dts-new-subscribe-sdk</artifactId>
-    <version>1.4.2</version>
-
-    <!-- licenses, licenses, scm tags are needed by public maven deploying-->
-    <licenses>
-        <license>
-            <name>The Apache Software License, Version 2.0</name>
-            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-        </license>
-    </licenses>
-    <distributionManagement>
-        <snapshotRepository>
-            <id>sonatype-nexus-snapshots</id>
-            <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
-        </snapshotRepository>
-        <repository>
-            <id>sonatype-nexus-staging</id>
-            <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-        </repository>
-    </distributionManagement>
-    <scm>
-        <url>https://github.com/aliyun/aliyun-dts-subscribe-sdk-java</url>
-        <connection>scm:git:git@github.com:aliyun/aliyun-dts-subscribe-sdk-java.git</connection>
-        <developerConnection>scm:git:git@github.com:aliyun/aliyun-dts-subscribe-sdk-java.git</developerConnection>
-    </scm>
-    <developers>
-        <developer>
-            <id>aliyunproducts</id>
-            <name>Aliyun SDK</name>
-            <email>aliyunsdk@aliyun.com</email>
-        </developer>
-    </developers>
+    <groupId>com.taobao.drc.client</groupId>
+    <artifactId>dts-uniform-subscribe-sdk</artifactId>
+    <version>${revision}</version>
+    <packaging>pom</packaging>
 
     <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <encoding>UTF-8</encoding>
-        <java.version>1.8</java.version>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
+        <revision>1.1.3</revision>
+        <project.build.sourceEncoding>US-ASCII</project.build.sourceEncoding>
+        <maven.deploy.skip>false</maven.deploy.skip>
+        <version.commons-logging>1.2</version.commons-logging>
+        <version.fastjson>1.2.68.noneautotype</version.fastjson>
     </properties>
 
+    <modules>
+        <module>drc-client</module>
+        <module>dts-client</module>
+        <module>common</module>
+        <module>message</module>
+        <module>client</module>
+        <module>filter</module>
+        <module>network</module>
+        <module>api</module>
+        <module>store</module>
+        <module>client-test</module>
+    </modules>
 
-    <dependencies>
-        <dependency>
-            <groupId>org.apache.avro</groupId>
-            <artifactId>avro</artifactId>
-            <version>1.8.2</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka-clients</artifactId>
-            <version>1.0.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.alibaba</groupId>
-            <artifactId>fastjson</artifactId>
-            <version>1.2.31</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
-            <version>3.8.1</version>
-        </dependency>
-        <dependency>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
-            <version>1.2.17</version>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-            <version>1.7.21</version>
-        </dependency>
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-            <version>28.0-jre</version>
-            <exclusions>
-                <exclusion>
-                    <artifactId>jsr305</artifactId>
-                    <groupId>com.google.code.findbugs</groupId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>com.vividsolutions</groupId>
-            <artifactId>jts-core</artifactId>
-            <version>1.14.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.aliyun</groupId>
-            <artifactId>aliyun-java-sdk-core</artifactId>
-            <version>4.5.18</version>
-        </dependency>
-        <dependency>
-            <groupId>com.aliyun</groupId>
-            <artifactId>aliyun-java-sdk-dts</artifactId>
-            <version>5.1.18</version>
-        </dependency>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.13.1</version>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
+    <dependencyManagement>
+        <dependencies>
+            <!-- Outer dependencies -->
+            <dependency>
+                <groupId>org.apache.httpcomponents</groupId>
+                <artifactId>httpclient</artifactId>
+                <version>4.3.6</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>2.9.10.6</version>
+            </dependency>
+            <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <version>4.4</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>3.3.2</version>
+            </dependency>
+            <dependency>
+                <groupId>commons-beanutils</groupId>
+                <artifactId>commons-beanutils</artifactId>
+                <version>1.9.2</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.httpcomponents</groupId>
+                <artifactId>fluent-hc</artifactId>
+                <version>4.2.1</version>
+            </dependency>
+            <dependency>
+                <groupId>com.alibaba</groupId>
+                <artifactId>fastjson</artifactId>
+                <version>${version.fastjson}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.jpountz.lz4</groupId>
+                <artifactId>lz4</artifactId>
+                <version>1.3.0</version>
+            </dependency>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-all</artifactId>
+                <version>4.0.52.Final</version>
+            </dependency>
+            <dependency>
+                <groupId>com.taobao.jdk</groupId>
+                <artifactId>taobao-patch</artifactId>
+                <version>6.30</version>
+            </dependency>
+            <dependency>
+                <groupId>com.taobao.drc</groupId>
+                <artifactId>h2</artifactId>
+                <version>1.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.taobao.togo</groupId>
+                <artifactId>clients</artifactId>
+                <version>1.0.0.40-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>28.0-jre</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.avro</groupId>
+                <artifactId>avro</artifactId>
+                <version>1.8.2</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-log4j12</artifactId>
+                <version>1.7.21</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.aliyun</groupId>
+                <artifactId>aliyun-java-sdk-dts</artifactId>
+                <version>5.1.18</version>
+            </dependency>
+            <dependency>
+                <groupId>com.aliyun</groupId>
+                <artifactId>aliyun-java-sdk-core</artifactId>
+                <version>4.5.18</version>
+            </dependency>
+            <dependency>
+                <groupId>com.vividsolutions</groupId>
+                <artifactId>jts-core</artifactId>
+                <version>1.14.0</version>
+            </dependency>
+            <dependency>
+                <groupId>commons-logging</groupId>
+                <artifactId>commons-logging</artifactId>
+                <version>${version.commons-logging}</version>
+            </dependency>
+
+            <!-- Internal dependencies -->
+            <dependency>
+                <groupId>com.taobao.drc.client</groupId>
+                <artifactId>api</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.taobao.drc.client</groupId>
+                <artifactId>client</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.taobao.drc.client</groupId>
+                <artifactId>drc-client</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.taobao.drc.client</groupId>
+                <artifactId>dts-client</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.taobao.drc.client</groupId>
+                <artifactId>common</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.taobao.drc.client</groupId>
+                <artifactId>filter</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.taobao.drc.client</groupId>
+                <artifactId>message</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.taobao.drc.client</groupId>
+                <artifactId>network</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.taobao.drc.client</groupId>
+                <artifactId>store</artifactId>
+                <version>${revision}</version>
+            </dependency>
+
+        </dependencies>
+    </dependencyManagement>
 
     <build>
-        <resources>
-            <resource>
-                <directory>src/main/resources</directory>
-                <filtering>true</filtering>
-            </resource>
-        </resources>
-
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
-                    <encoding>UTF-8</encoding>
-                </configuration>
-            </plugin>
-            <plugin>
-                <artifactId> maven-assembly-plugin </artifactId>
-                <configuration>
-                    <descriptorRefs>
-                        <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>
-                </configuration>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.3.0</version>
                 <executions>
                     <execution>
                         <id>make-assembly</id>
@@ -150,7 +196,85 @@
                         </goals>
                     </execution>
                 </executions>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>com.taobao.drc.client.SDKTools</mainClass>
+                        </manifest>
+                    </archive>
+                    <!-- 设置 JAR 包输出目录 -->
+                    <outputDirectory>${project.build.directory}</outputDirectory>
+                    <!-- 设置打包后的 JAR 包的目录结构为默认 -->
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.3.2</version>
+                <configuration>
+                    <verbose>true</verbose>
+                    <fork>true</fork>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                    <compilerVersion>1.8</compilerVersion>
+                    <encoding>utf8</encoding>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <version>1.1.0</version>
+                <configuration>
+                    <updatePomFile>true</updatePomFile>
+                    <flattenMode>resolveCiFriendliesOnly</flattenMode>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>flatten</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>flatten</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>flatten.clean</id>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
+    <repositories>
+        <repository>
+            <id>codelds</id>
+            <url>https://code.lds.org/nexus/content/groups/main-repo</url>
+        </repository>
+        <repository>
+            <id>clojars.org</id>
+            <url>http://clojars.org/repo</url>
+        </repository>
+        <repository>
+            <id>tbmirror</id>
+            <url>http://mvnrepo.alibaba-inc.com/mvn/repository</url>
+        </repository>
+    </repositories>
+    <distributionManagement>
+        <repository>
+            <id>releases</id>
+            <url>http://mvnrepo.alibaba-inc.com/mvn/releases/</url>
+        </repository>
+        <snapshotRepository>
+            <id>snapshots</id>
+            <url>http://mvnrepo.alibaba-inc.com/mvn/snapshots/</url>
+        </snapshotRepository>
+    </distributionManagement>
+    <contributors><contributor><properties><provider>yanmen.zm@alibaba-inc.com</provider><codeName>null</codeName><codeUrl>git@gitlab.alibaba-inc.com:amp/uniform-client-java.git commit:bd93b1f</codeUrl><description>contributors added by SCM Plugin, please don't modify it!</description></properties></contributor></contributors>
 </project>
