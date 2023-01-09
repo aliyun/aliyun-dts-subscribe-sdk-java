@@ -47,15 +47,18 @@
     <dependencies>
         <dependency>
             <groupId>com.taobao.drc.client</groupId>
-            <artifactId>store</artifactId>
+            <artifactId>dts-uniform-subscribe-sdk-store</artifactId>
+            <version>${revision}</version>
         </dependency>
         <dependency>
             <groupId>com.taobao.drc.client</groupId>
-            <artifactId>api</artifactId>
+            <artifactId>dts-uniform-subscribe-sdk-api</artifactId>
+            <version>${revision}</version>
         </dependency>
         <dependency>
             <groupId>com.taobao.drc.client</groupId>
-            <artifactId>message</artifactId>
+            <artifactId>dts-uniform-subscribe-sdk-message</artifactId>
+            <version>${revision}</version>
         </dependency>
         <dependency>
             <groupId>com.aliyun</groupId>

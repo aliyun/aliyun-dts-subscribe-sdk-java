@@ -5,7 +5,7 @@
 
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>filter</artifactId>
+    <artifactId>dts-uniform-subscribe-sdk-filter</artifactId>
     <packaging>jar</packaging>
 
     <parent>
@@ -17,7 +17,8 @@
     <dependencies>
         <dependency>
             <groupId>com.taobao.drc.client</groupId>
-            <artifactId>common</artifactId>
+            <artifactId>dts-uniform-subscribe-sdk-common</artifactId>
+            <version>${revision}</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
