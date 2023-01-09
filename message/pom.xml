@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>message</artifactId>
+    <artifactId>dts-uniform-subscribe-sdk-message</artifactId>
     <packaging>jar</packaging>
 
     <parent>
@@ -16,7 +16,8 @@
     <dependencies>
         <dependency>
             <groupId>com.taobao.drc.client</groupId>
-            <artifactId>common</artifactId>
+            <artifactId>dts-uniform-subscribe-sdk-common</artifactId>
+            <version>${revision}</version>
         </dependency>
         <dependency>
             <groupId>io.netty</groupId>
