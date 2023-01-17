@@ -342,15 +342,5 @@
             <url>http://mvnrepo.alibaba-inc.com/mvn/repository</url>
         </repository>
     </repositories>
-    <distributionManagement>
-        <repository>
-            <id>releases</id>
-            <url>http://mvnrepo.alibaba-inc.com/mvn/releases/</url>
-        </repository>
-        <snapshotRepository>
-            <id>snapshots</id>
-            <url>http://mvnrepo.alibaba-inc.com/mvn/snapshots/</url>
-        </snapshotRepository>
-    </distributionManagement>
     <contributors><contributor><properties><provider>yanmen.zm@alibaba-inc.com</provider><codeName>null</codeName><codeUrl>git@gitlab.alibaba-inc.com:amp/uniform-client-java.git commit:bd93b1f</codeUrl><description>contributors added by SCM Plugin, please don't modify it!</description></properties></contributor></contributors>
 </project>
