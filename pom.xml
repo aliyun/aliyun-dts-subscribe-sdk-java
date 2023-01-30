@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.taobao.drc.client</groupId>
+    <groupId>com.alibaba.dts.client</groupId>
     <artifactId>dts-uniform-subscribe-sdk</artifactId>
     <version>${revision}</version>
     <packaging>pom</packaging>
@@ -163,47 +163,47 @@
 
             <!-- Internal dependencies -->
             <dependency>
-                <groupId>com.taobao.drc.client</groupId>
+                <groupId>com.alibaba.dts.client</groupId>
                 <artifactId>api</artifactId>
                 <version>${revision}</version>
             </dependency>
             <dependency>
-                <groupId>com.taobao.drc.client</groupId>
+                <groupId>com.alibaba.dts.client</groupId>
                 <artifactId>client</artifactId>
                 <version>${revision}</version>
             </dependency>
             <dependency>
-                <groupId>com.taobao.drc.client</groupId>
+                <groupId>com.alibaba.dts.client</groupId>
                 <artifactId>drc-client</artifactId>
                 <version>${revision}</version>
             </dependency>
             <dependency>
-                <groupId>com.taobao.drc.client</groupId>
+                <groupId>com.alibaba.dts.client</groupId>
                 <artifactId>dts-client</artifactId>
                 <version>${revision}</version>
             </dependency>
             <dependency>
-                <groupId>com.taobao.drc.client</groupId>
+                <groupId>com.alibaba.dts.client</groupId>
                 <artifactId>common</artifactId>
                 <version>${revision}</version>
             </dependency>
             <dependency>
-                <groupId>com.taobao.drc.client</groupId>
+                <groupId>com.alibaba.dts.client</groupId>
                 <artifactId>filter</artifactId>
                 <version>${revision}</version>
             </dependency>
             <dependency>
-                <groupId>com.taobao.drc.client</groupId>
+                <groupId>com.alibaba.dts.client</groupId>
                 <artifactId>message</artifactId>
                 <version>${revision}</version>
             </dependency>
             <dependency>
-                <groupId>com.taobao.drc.client</groupId>
+                <groupId>com.alibaba.dts.client</groupId>
                 <artifactId>network</artifactId>
                 <version>${revision}</version>
             </dependency>
             <dependency>
-                <groupId>com.taobao.drc.client</groupId>
+                <groupId>com.alibaba.dts.client</groupId>
                 <artifactId>store</artifactId>
                 <version>${revision}</version>
             </dependency>
@@ -229,7 +229,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>com.taobao.drc.client.SDKTools</mainClass>
+                            <mainClass>com.alibaba.dts.client.SDKTools</mainClass>
                         </manifest>
                     </archive>
                     <!-- 设置 JAR 包输出目录 -->

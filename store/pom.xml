@@ -10,25 +10,25 @@
 
     <parent>
         <artifactId>dts-uniform-subscribe-sdk</artifactId>
-        <groupId>com.taobao.drc.client</groupId>
+        <groupId>com.alibaba.dts.client</groupId>
         <version>${revision}</version>
     </parent>
 
     <dependencies>
         <dependency>
-            <groupId>com.taobao.drc.client</groupId>
+            <groupId>com.alibaba.dts.client</groupId>
             <artifactId>dts-uniform-subscribe-sdk-api</artifactId>
             <version>${revision}</version>
         </dependency>
 
         <dependency>
-            <groupId>com.taobao.drc.client</groupId>
+            <groupId>com.alibaba.dts.client</groupId>
             <artifactId>dts-uniform-subscribe-sdk-common</artifactId>
             <version>${revision}</version>
         </dependency>
 
         <dependency>
-            <groupId>com.taobao.drc.client</groupId>
+            <groupId>com.alibaba.dts.client</groupId>
             <artifactId>dts-uniform-subscribe-sdk-network</artifactId>
             <version>${revision}</version>
         </dependency>
