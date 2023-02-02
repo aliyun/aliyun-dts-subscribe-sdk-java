@@ -8,6 +8,9 @@
     <artifactId>dts-uniform-subscribe-sdk</artifactId>
     <version>${revision}</version>
     <packaging>pom</packaging>
+    <name>dts-uniform-subscribe-sdk</name>
+    <description>Alibaba DTS Subscribe SDK for DStore and DrcStore</description>
+    <url>https://github.com/aliyun/aliyun-dts-subscribe-sdk-java</url>
 
     <!-- licenses, licenses, scm tags are needed by public maven deploying-->
     <licenses>
