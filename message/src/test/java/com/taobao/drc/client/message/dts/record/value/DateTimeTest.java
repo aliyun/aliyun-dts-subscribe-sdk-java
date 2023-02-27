@@ -15,7 +15,7 @@ public class DateTimeTest {
     @Test
     public void testDatetimeResetSegments() {
         DateTime normalValue = new DateTime("2018-01-29 11:59:10.0 Asia/Shanghai", DateTime.SEG_DATETIME_NAONS_TZ);
-        Assert.assertTrue(StringUtils.equals(normalValue.toJdbcString(DateTime.SEG_DATETIME_NAONS), "2018-01-29 11:59:10.0"));
+        Assert.assertTrue(StringUtils.equals(normalValue.toJdbcString(DateTime.SEG_DATETIME_NAONS), "2018-01-29 11:59:10"));
         Assert.assertTrue(StringUtils.equals(normalValue.getTimeZone(), "Asia/Shanghai"));
     }
 
@@ -150,7 +150,7 @@ public class DateTimeTest {
         dateTime.setMinute(2);
         dateTime.setSecond(2);
         dateTime.setNaons(0);
-        assertEquals("02:02:02.0", dateTime.toString());
+        assertEquals("02:02:02", dateTime.toString());
 
         dateTime.setHour(-838);
         dateTime.setMinute(59);
@@ -214,9 +214,9 @@ public class DateTimeTest {
         dateTime.setMinute(2);
         dateTime.setSecond(2);
         dateTime.setNaons(0);
-        assertEquals("2019-09-11 02:02:02.0 GMT+08:00", dateTime.toString());
+        assertEquals("2019-09-11 02:02:02 GMT+08:00", dateTime.toString());
 
-        assertEquals("2019-09-11 02:02:02.0 GMT+08:00", dateTime.getData());
+        assertEquals("2019-09-11 02:02:02 GMT+08:00", dateTime.getData());
     }
 
     @Test
@@ -293,7 +293,7 @@ public class DateTimeTest {
         DateTime t2 = new DateTime("2018-01-29 11:59:11.123", DateTime.SEG_DATETIME_NAONS);
         Assert.assertEquals("2018-01-29 11:59:11.000123", t2.toUnixTimestampValue().toString());
         DateTime t3 = new DateTime("2018-01-29 11:59:11", DateTime.SEG_DATETIME);
-        Assert.assertEquals("2018-01-29 11:59:11.0", t3.toUnixTimestampValue().toString());
+        Assert.assertEquals("2018-01-29 11:59:11", t3.toUnixTimestampValue().toString());
     }
 
     @Test
@@ -351,9 +351,9 @@ public class DateTimeTest {
     @Test
     public void testParseJdbcDatetimeTest() throws ParseException {
         DateTime dateTime = new DateTime("0002-12-18 01:05:52+08:05:52 BC", DateTime.SEG_DATETIME_NAONS_TZ_ERA);
-        Assert.assertEquals("0002-12-18 01:05:52.0 +08:05:52 BC", dateTime.toString());
+        Assert.assertEquals("0002-12-18 01:05:52 +08:05:52 BC", dateTime.toString());
 
         DateTime dateTime2 = new DateTime("0002-12-18 01:05:52+08:05:52", DateTime.SEG_DATETIME_NAONS_TZ_ERA);
-        Assert.assertEquals("0002-12-18 01:05:52.0 +08:05:52", dateTime2.toString());
+        Assert.assertEquals("0002-12-18 01:05:52 +08:05:52", dateTime2.toString());
     }
 }
