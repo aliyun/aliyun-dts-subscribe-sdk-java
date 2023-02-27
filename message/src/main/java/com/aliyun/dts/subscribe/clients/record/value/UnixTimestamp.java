@@ -55,7 +55,12 @@ public class UnixTimestamp implements Value<String> {
     public String toString(DateFormat dateFormat) {
         Timestamp timestamp = toJdbcTimestamp();
         if (null == dateFormat) {
-            return timestamp.toString();
+            String timestampStr = timestamp.toString();
+
+            if (timestamp.getNanos() == 0 && timestampStr.contains(".")) {
+                timestampStr = timestampStr.substring(0, timestampStr.indexOf("."));
+            }
+            return timestampStr;
         } else {
             return dateFormat.format(timestamp);
         }
