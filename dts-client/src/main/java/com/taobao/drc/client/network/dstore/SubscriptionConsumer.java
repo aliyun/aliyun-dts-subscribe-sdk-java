@@ -110,6 +110,9 @@ public class SubscriptionConsumer extends BaseDStoreConsumer {
                 if (ClusterManagerFacade.askSubscribeChannelAndRedirect(config) == SubscribeChannel.DRC) {
                     AbstractStoreClient.sendRuntimeLog(listener, "WARN", "Consumption switch to DRC");
                     throw new DStoreSwitchException("Consumption switch to DRC.");
+                } else {
+                    logger.error("Get consumer records empty, retrieved record count: " + consumerRecords.count());
+                    reset();
                 }
             }
             return Collections.emptyList();
