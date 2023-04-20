@@ -44,8 +44,8 @@
             <artifactId>avro</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.taobao.togo</groupId>
-            <artifactId>clients</artifactId>
+            <groupId>com.alibaba.dts.client</groupId>
+            <artifactId>togo-clients</artifactId>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
