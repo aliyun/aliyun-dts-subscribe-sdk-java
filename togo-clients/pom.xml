@@ -6,7 +6,6 @@
     <groupId>com.alibaba.dts.client</groupId>
     <artifactId>togo-clients</artifactId>
     <version>1.0.0.45</version>
-    <name>togo-clients</name>
     <description>Alibaba DTS Togo Clients</description>
     <url>https://github.com/aliyun/aliyun-dts-subscribe-sdk-java/togo-clients</url>
 
