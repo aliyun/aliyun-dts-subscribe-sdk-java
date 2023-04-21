@@ -9,6 +9,36 @@
     <description>Alibaba DTS Togo Clients</description>
     <url>https://github.com/aliyun/aliyun-dts-subscribe-sdk-java/togo-clients</url>
 
+    <!-- licenses, licenses, scm tags are needed by public maven deploying-->
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+    </licenses>
+    <distributionManagement>
+        <snapshotRepository>
+            <id>sonatype-nexus-snapshots</id>
+            <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+        <repository>
+            <id>sonatype-nexus-staging</id>
+            <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+        </repository>
+    </distributionManagement>
+    <scm>
+        <url>https://github.com/aliyun/aliyun-dts-subscribe-sdk-java/togo-clients::aliyun-ali-togo</url>
+        <connection>scm:git:git@github.com:aliyun/aliyun-dts-subscribe-sdk-java.git/togo-clients::aliyun-ali-togo</connection>
+        <developerConnection>scm:git:git@github.com:aliyun/aliyun-dts-subscribe-sdk-java.git/togo-clients::aliyun-ali-togo</developerConnection>
+    </scm>
+    <developers>
+        <developer>
+            <id>aliyunproducts</id>
+            <name>Aliyun SDK</name>
+            <email>aliyunsdk@aliyun.com</email>
+        </developer>
+    </developers>
+
     <properties>
         <version.log4j>2.17.1</version.log4j>
         <version.slf4j.api>1.7.25</version.slf4j.api>
