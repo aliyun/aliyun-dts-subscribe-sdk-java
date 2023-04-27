@@ -417,6 +417,7 @@ public class DRCClientImpl implements DRCClient {
                         break;
                     } catch (Throwable e) {
                         log.warn("retry times [" + maxRetryTimes + "], retried [" + retriedTimes + "], errors:" + e.getMessage());
+                        client.sendRuntimeLog("WARN","retry times [" + maxRetryTimes + "], retried [" + retriedTimes + "], errors:" + e.getMessage());
                     }
                     if(quit){
                         break;
