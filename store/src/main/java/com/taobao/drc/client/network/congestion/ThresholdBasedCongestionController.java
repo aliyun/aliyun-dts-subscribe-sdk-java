@@ -1,7 +1,7 @@
 package com.taobao.drc.client.network.congestion;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * @since 17/1/19
  */
 public class ThresholdBasedCongestionController implements CongestionController {
-    private static final Log logger = LogFactory.getLog(ThresholdBasedCongestionController.class);
+    private static final Logger logger = LoggerFactory.getLogger(ThresholdBasedCongestionController.class);
 
     private final long lowerBound;
     private final long upperBound;

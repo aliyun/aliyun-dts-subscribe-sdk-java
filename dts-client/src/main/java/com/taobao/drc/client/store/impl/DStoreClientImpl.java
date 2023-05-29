@@ -10,8 +10,8 @@ import com.taobao.drc.client.network.DStoreNetworkEndpoint;
 import com.taobao.drc.client.network.dstore.DStoreOffsetNotExistException;
 import io.netty.util.concurrent.Future;
 import org.apache.commons.beanutils.BeanUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -20,7 +20,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class DStoreClientImpl  extends AbstractStoreClient {
-    private static final Log log = LogFactory.getLog(DStoreClientImpl.class);
+    private static final Logger log = LoggerFactory.getLogger(DStoreClientImpl.class);
     private volatile ExecutorService service;
     private final DStoreNetworkEndpoint endpoint;
     public DStoreClientImpl(Listener listener, UserConfig userConfig, CheckpointManager checkpointManager, DataFilterBase filter, String parseThreadPrefix, String notifyThreadPrefix) {

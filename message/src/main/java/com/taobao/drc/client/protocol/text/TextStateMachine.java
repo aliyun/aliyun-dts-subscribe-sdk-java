@@ -9,8 +9,8 @@ import com.taobao.drc.client.protocol.StateMachine;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.util.*;
@@ -27,7 +27,7 @@ public class TextStateMachine implements StateMachine {
     private static final String ATTR_MESSAGE_ID = "message_id";
     private static final String ATTR_MESSAGE_TYPE = "message_type";
 
-    private static final Log log = LogFactory.getLog(TextStateMachine.class);
+    private static final Logger log = LoggerFactory.getLogger(TextStateMachine.class);
 
     private Map<String, String> attrMap = new HashMap<String, String>();
 

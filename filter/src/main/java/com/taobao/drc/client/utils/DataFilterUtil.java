@@ -1,9 +1,8 @@
 package com.taobao.drc.client.utils;
 
 import com.taobao.drc.client.DataFilterBase;
-import com.taobao.drc.client.DataFilterV2;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.List;
@@ -13,7 +12,7 @@ import java.util.Map;
  * Created by longxuan on 17/2/9.
  */
 public class DataFilterUtil {
-    private static final Log logger = LogFactory.getLog(DataFilterUtil.class);
+    private static final Logger logger = LoggerFactory.getLogger(DataFilterUtil.class);
 
     /**
      *

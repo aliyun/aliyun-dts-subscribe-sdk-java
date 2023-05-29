@@ -10,8 +10,8 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.Attribute;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ScheduledFuture;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.TimeUnit;
 
@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit;
 public class RecordPreNotifyHandler extends ChannelInboundHandlerAdapter {
     private static final Long PERIOD_OUTPUT_PENDING_SIZE = 10000L;
 
-    private static final Log log = LogFactory.getLog(RecordPreNotifyHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(RecordPreNotifyHandler.class);
 
     private boolean first = true;
 

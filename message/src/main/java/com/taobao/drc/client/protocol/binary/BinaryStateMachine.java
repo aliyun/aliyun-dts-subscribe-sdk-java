@@ -5,8 +5,6 @@ import com.taobao.drc.client.protocol.StateMachine;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 import java.io.IOException;
 import java.nio.ByteOrder;
@@ -15,8 +13,6 @@ import java.nio.ByteOrder;
  * Created by jianjundeng on 10/12/14.
  */
 public class BinaryStateMachine implements StateMachine {
-
-    private static final Log log = LogFactory.getLog(BinaryStateMachine.class);
 
     private static final int MESSAGE_LENGTH_THRESHOLD = 1024 * 1024 * 128;
 

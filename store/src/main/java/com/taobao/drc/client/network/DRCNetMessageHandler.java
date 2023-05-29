@@ -7,15 +7,15 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.Attribute;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Created by jianjundeng on 3/3/15.
  */
 public class DRCNetMessageHandler extends ChannelInboundHandlerAdapter {
 
-    private static final Log log = LogFactory.getLog(DRCNetMessageHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(DRCNetMessageHandler.class);
 
     private DRCNetCompressByteBufProcessor byteBufProcessor;
 

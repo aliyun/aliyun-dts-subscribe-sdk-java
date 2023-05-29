@@ -16,8 +16,8 @@ import com.taobao.drc.client.store.impl.DStoreClientImpl;
 import com.taobao.drc.client.utils.Constant;
 import io.netty.util.concurrent.Future;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -38,7 +38,7 @@ import static com.taobao.drc.client.utils.Constant.*;
  */
 public class DRCClientImpl implements DRCClient {
 
-    private static final Log log = LogFactory.getLog(DRCClientImpl.class);
+    private static final Logger log = LoggerFactory.getLogger(DRCClientImpl.class);
 
     private DataFilterBase filter;
 
@@ -223,9 +223,7 @@ public class DRCClientImpl implements DRCClient {
         userConfig.setPassword(identification);
         if (dbName != null) {
             if (!isValidTopicName(dbName)) {
-                //todo remove(yanmen)
-                System.out.println("Not a valid dbName: " + dbName);
-                log.info("Not a valid dbName: " + dbName);
+                log.debug("Not a valid dbName: " + dbName);
                 // db is a branched db name
                 filter.setBranchDb(dbName);
             }
@@ -402,6 +400,7 @@ public class DRCClientImpl implements DRCClient {
                 final int maxRetryTimes = userConfig.getRetryTimes();
                 int retriedTimes = 0;
                 do {
+                    Throwable lastException = null;
                     try {
                         boolean callResult;
                         if (isMulti) {
@@ -416,6 +415,7 @@ public class DRCClientImpl implements DRCClient {
                         e.printStackTrace();
                         break;
                     } catch (Throwable e) {
+                        lastException = e;
                         log.warn("retry times [" + maxRetryTimes + "], retried [" + retriedTimes + "], errors:" + e.getMessage());
                         client.sendRuntimeLog("WARN","retry times [" + maxRetryTimes + "], retried [" + retriedTimes + "], errors:" + e.getMessage());
                     }
@@ -424,8 +424,8 @@ public class DRCClientImpl implements DRCClient {
                     }
                     if (autoRetry) {
                         if (maxRetryTimes != -1 && retriedTimes >= maxRetryTimes) {
-                            log.warn("Reached max retry times [" + maxRetryTimes + "], retried [" + retriedTimes + "]");
-                            throw new RuntimeException("Client Retry exceed max retry time");
+                            log.warn("Reached max retry times [" + maxRetryTimes + "], retried [" + retriedTimes + "]", lastException);
+                            throw new RuntimeException("Client Retry exceed max retry time", lastException);
                         }
                         log.info("client retry: max retries [" + maxRetryTimes + "], retried [" + retriedTimes + "] times, sleep 10s");
                         try {

@@ -11,7 +11,7 @@ import java.util.Set;
  * Created by jianjundeng on 5/7/15.
  */
 public class Constant {
-    public static final String DTS_CLIENT_VERSION = "1.1-SNAPSHOT";
+    public static final String DTS_CLIENT_VERSION = "1.1.8";
 
     public static final String DEFAULT_ENCODING = "UTF8";
 
