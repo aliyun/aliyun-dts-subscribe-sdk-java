@@ -416,7 +416,7 @@ public class DRCClientImpl implements DRCClient {
                         break;
                     } catch (Throwable e) {
                         lastException = e;
-                        log.warn("retry times [" + maxRetryTimes + "], retried [" + retriedTimes + "], errors:" + e.getMessage());
+                        log.warn("retry times [" + maxRetryTimes + "], retried [" + retriedTimes + "], errors:", e);
                         client.sendRuntimeLog("WARN","retry times [" + maxRetryTimes + "], retried [" + retriedTimes + "], errors:" + e.getMessage());
                     }
                     if(quit){
@@ -424,7 +424,7 @@ public class DRCClientImpl implements DRCClient {
                     }
                     if (autoRetry) {
                         if (maxRetryTimes != -1 && retriedTimes >= maxRetryTimes) {
-                            log.warn("Reached max retry times [" + maxRetryTimes + "], retried [" + retriedTimes + "]", lastException);
+                            log.error("Reached max retry times [" + maxRetryTimes + "], retried [" + retriedTimes + "]", lastException);
                             throw new RuntimeException("Client Retry exceed max retry time", lastException);
                         }
                         log.info("client retry: max retries [" + maxRetryTimes + "], retried [" + retriedTimes + "] times, sleep 10s");
