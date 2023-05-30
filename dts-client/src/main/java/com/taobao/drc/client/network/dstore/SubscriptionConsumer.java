@@ -15,11 +15,11 @@ import com.taobao.drc.togo.client.consumer.*;
 import com.taobao.drc.togo.common.businesslogic.TagMatchFunction;
 import com.taobao.drc.togo.client.consumer.FetchRule;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.kafka.clients.consumer.OffsetAndTimestamp;
 import org.apache.kafka.clients.consumer.OffsetOutOfRangeException;
 import org.apache.kafka.common.TopicPartition;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
@@ -28,7 +28,7 @@ import java.util.*;
  * @author xusheng.zkw
  */
 public class SubscriptionConsumer extends BaseDStoreConsumer {
-    private static final Log logger = LogFactory.getLog(SubscriptionConsumer.class);
+    private static final Logger logger = LoggerFactory.getLogger(SubscriptionConsumer.class);
     private volatile com.taobao.drc.togo.client.consumer.TogoConsumer consumer;
     private volatile FetchRule rule;
     private volatile Long lastOutOfRangeOffset = null;

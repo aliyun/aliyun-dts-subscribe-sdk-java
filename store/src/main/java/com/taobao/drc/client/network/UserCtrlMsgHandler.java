@@ -4,8 +4,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This handler is used to encode and write user control messages. Writes before the protocol handshake is over will
@@ -15,7 +15,7 @@ import org.apache.commons.logging.LogFactory;
  * @since 17/1/20
  */
 public class UserCtrlMsgHandler extends ChannelDuplexHandler {
-    private static final Log logger = LogFactory.getLog(UserCtrlMsgHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(UserCtrlMsgHandler.class);
 
     private static final byte USER_CTL_MESSAGE = 6;
     private static final int USER_CTL_MESSAGE_HEADER_LENGTH = 5;

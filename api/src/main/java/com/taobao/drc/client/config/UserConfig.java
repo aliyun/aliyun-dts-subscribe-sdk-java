@@ -10,8 +10,6 @@ import com.taobao.drc.client.impl.LocalityFile;
 import com.taobao.drc.client.sql.SqlEngine;
 import com.taobao.drc.client.utils.Constant;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 import java.net.URLEncoder;
 import java.util.ArrayList;
@@ -23,7 +21,6 @@ import java.util.Map;
  * Created by jianjundeng on 3/3/15.
  */
 public class UserConfig {
-    private static final Log log = LogFactory.getLog(UserConfig.class);
 
     private Long id;
 

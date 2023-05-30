@@ -7,6 +7,7 @@ import com.taobao.drc.client.DRCClientException;
 import com.taobao.drc.client.SubscribeChannel;
 import com.taobao.drc.client.config.UserConfig;
 import com.taobao.drc.client.enums.DBType;
+import com.taobao.drc.client.protocol.text.TextStateMachine;
 import com.taobao.drc.client.utils.CommonUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -16,6 +17,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.fluent.Request;
 import org.apache.http.message.BasicNameValuePair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URLEncoder;
@@ -30,7 +33,7 @@ import java.util.Map;
  */
 public class ClusterManagerFacade {
 
-    private static final Log log = LogFactory.getLog(ClusterManagerFacade.class);
+    private static final Logger log = LoggerFactory.getLogger(ClusterManagerFacade.class);
 
     private static final int timeout = 60000;
 

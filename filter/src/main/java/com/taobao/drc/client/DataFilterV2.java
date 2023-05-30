@@ -9,11 +9,11 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class DataFilterV2 implements DataFilterBase {
-    private static final Log logger = LogFactory.getLog(DataFilterV2.class);
+    private static final Logger logger = LoggerFactory.getLogger(DataFilterV2.class);
 
     /**
      * Class store the raw info user passed.

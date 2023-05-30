@@ -9,8 +9,8 @@ import io.netty.channel.ChannelHandlerContext;
 import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4FastDecompressor;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
@@ -22,7 +22,7 @@ import static com.taobao.drc.client.transport.enums.DRCNetCompressState.*;
  */
 public class DRCNetCompressByteBufProcessor {
 
-    private static final Log log = LogFactory.getLog(DRCNetCompressByteBufProcessor.class);
+    private static final Logger log = LoggerFactory.getLogger(DRCNetCompressByteBufProcessor.class);
 
     private static final int MAGIC_NUMBER_SIZE = 25;
 

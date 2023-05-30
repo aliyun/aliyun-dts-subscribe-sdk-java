@@ -11,15 +11,15 @@ import com.taobao.drc.client.message.DataMessage.Record;
 import com.taobao.drc.client.message.DataMessage.Record.Type;
 import com.taobao.drc.client.message.drc.BinaryRecord;
 import com.taobao.drc.client.message.dts.DStoreAvroRecord;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
 import static com.taobao.drc.client.utils.Constant.POSITION_INFO;
 
 public class RecordNotifyHelper {
-    private static final Log log = LogFactory.getLog(RecordNotifyHelper.class);
+    private static final Logger log = LoggerFactory.getLogger(RecordNotifyHelper.class);
 
     private Listener messageListener;
 

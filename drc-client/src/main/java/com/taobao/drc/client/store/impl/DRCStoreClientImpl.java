@@ -15,8 +15,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.util.concurrent.Future;
 import org.apache.commons.beanutils.BeanUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
@@ -35,7 +35,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * and notify listeners.
  */
 public class DRCStoreClientImpl extends AbstractStoreClient {
-    private static final Log log = LogFactory.getLog(DRCStoreClientImpl.class);
+    private static final Logger log = LoggerFactory.getLogger(DRCStoreClientImpl.class);
     private final NetworkEndpoint endpoint;
     private volatile ExecutorService service;
     private final AtomicBoolean firstBootstrap = new AtomicBoolean(false);

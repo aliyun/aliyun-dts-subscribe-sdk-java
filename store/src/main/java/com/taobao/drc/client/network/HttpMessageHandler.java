@@ -12,8 +12,8 @@ import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.util.Attribute;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.ByteOrder;
 
@@ -22,7 +22,7 @@ import java.nio.ByteOrder;
  */
 public class HttpMessageHandler extends ChannelInboundHandlerAdapter {
 
-    private static final Log log = LogFactory.getLog(HttpMessageHandler.class);
+    private static final Logger log = LoggerFactory.getLogger(HttpMessageHandler.class);
 
     private StateMachine stateMachine;
 

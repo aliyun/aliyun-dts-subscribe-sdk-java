@@ -8,8 +8,8 @@ import com.taobao.drc.client.utils.BinaryMessageUtils;
 import com.taobao.drc.client.protocol.binary.DataType;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.ByteOrder;
 import java.util.ArrayList;
@@ -30,7 +30,7 @@ import static com.taobao.drc.client.utils.MessageConstant.DEFAULT_ENCODING;
  * Created by jianjundeng on 7/18/16.
  */
 public class BinaryRecord extends Record {
-    private static final Log log = LogFactory.getLog(BinaryRecord.class);
+    private static final Logger log = LoggerFactory.getLogger(BinaryRecord.class);
 
     //old version header length
     private static final int OLD_VERSION_2_HEADER_LEN = 88;

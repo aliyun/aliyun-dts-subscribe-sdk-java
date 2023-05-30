@@ -9,11 +9,11 @@ import com.taobao.drc.client.network.DataFlowLimitHandler;
 import com.taobao.drc.client.network.RecordNotifyHelper;
 import com.taobao.drc.client.network.RecordPreNotifyHelper;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.OffsetAndTimestamp;
 import org.apache.kafka.common.TopicPartition;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -25,7 +25,7 @@ import java.util.concurrent.CountDownLatch;
  * @author xusheng.zkw
  */
 public abstract class BaseDStoreConsumer extends Thread implements DStoreConsumer {
-    private static final Log logger = LogFactory.getLog(BaseDStoreConsumer.class);
+    private static final Logger logger = LoggerFactory.getLogger(BaseDStoreConsumer.class);
     protected UserConfig config;
     protected final Listener listener;
     protected int pollTimeOut = 200;

@@ -3,8 +3,8 @@ package com.taobao.drc.client.network;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.TimeUnit;
 
@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
  * @since 17/5/31
  */
 public class AutoReadAwareReadTimeoutHandler extends IdleStateHandler {
-    private static final Log logger = LogFactory.getLog(AutoReadAwareReadTimeoutHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(AutoReadAwareReadTimeoutHandler.class);
     public static final int DEFAULT_READER_IDLE_TIME_SECONDS = 3;
 
     private final long readTimeoutNanos;
