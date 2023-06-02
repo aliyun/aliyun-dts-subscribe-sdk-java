@@ -221,6 +221,10 @@ public class UserConfig {
             params.put("hashMask", String.valueOf(hashMask));
             params.put("hashKey", hashKey);
         }
+
+        if(transportType != null && transportType.equals(TransportType.DRCNET)) {
+            params.put("useDrcNet", "true");
+        }
         params.put("client.version", Constant.DTS_CLIENT_VERSION);
         return params;
     }

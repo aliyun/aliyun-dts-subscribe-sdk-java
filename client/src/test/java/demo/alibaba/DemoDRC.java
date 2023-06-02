@@ -9,7 +9,7 @@ import com.taobao.drc.client.message.DataMessage;
 import java.util.Properties;
 
 public class DemoDRC {
-    private static String checkpointOfTimestamp = "1627870319";
+    private static String checkpointOfTimestamp = "1685697406";
     private static Listener messageListener = new Listener() {
         //异步通知
         @Override
@@ -72,7 +72,7 @@ public class DemoDRC {
                 //不推送事务begin commit消息
                 //client.requireTxnMark(false);
 
-                client.initService("RM_drc", "d_zheyi_test_metadata", "drc", checkpointOfTimestamp, null);
+                client.initService("71215", "ali_sh_alsc_mkt_buylimit_unit_app", "71215", checkpointOfTimestamp, null);
                 client.startService().join();
                 //消费同一个appName/topic下面的多个subTopic
                 //client.startMultiService().join();
