@@ -198,10 +198,19 @@ public class UserConfig {
         if(needUKRecord){
             params.put("client.needukrecord","true");
         }
-        switch (messageType) {
-            case BINARY:
+
+        if(transportType != null && transportType.equals(TransportType.DRCNET)) {
+            params.put("useDrcNet", "true");
+
+            if (messageType.equals(MessageType.BINARY)) {
                 params.put("writer.type", "data");
+            }
+        } else {
+            if (messageType.equals(MessageType.BINARY)) {
+                params.put("writer.type", "data");
+            }
         }
+
         if (blackList != null) {
             params.put("filter.blacklist", blackList);
         }
@@ -222,9 +231,6 @@ public class UserConfig {
             params.put("hashKey", hashKey);
         }
 
-        if(transportType != null && transportType.equals(TransportType.DRCNET)) {
-            params.put("useDrcNet", "true");
-        }
         params.put("client.version", Constant.DTS_CLIENT_VERSION);
         return params;
     }
