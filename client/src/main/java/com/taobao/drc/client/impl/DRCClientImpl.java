@@ -423,10 +423,16 @@ public class DRCClientImpl implements DRCClient {
                         break;
                     }
                     if (autoRetry) {
-                        if (maxRetryTimes != -1 && retriedTimes >= maxRetryTimes) {
+                        if ((maxRetryTimes != -1 && retriedTimes >= maxRetryTimes)) {
                             log.error("Reached max retry times [" + maxRetryTimes + "], retried [" + retriedTimes + "]", lastException);
                             throw new RuntimeException("Client Retry exceed max retry time", lastException);
                         }
+
+                        if (ifExceptionCannotRetry(lastException)) {
+                            log.error("Client this error cannot be retried: ", lastException);
+                            throw new RuntimeException("Client this error cannot be retried: ", lastException);
+                        }
+
                         log.info("client retry: max retries [" + maxRetryTimes + "], retried [" + retriedTimes + "] times, sleep 10s");
                         try {
                             TimeUnit.SECONDS.sleep(10);
@@ -447,6 +453,15 @@ public class DRCClientImpl implements DRCClient {
                 }
             }
         };
+    }
+
+    private boolean ifExceptionCannotRetry(Throwable exception) {
+        if (exception.getMessage().contains(" Found no feasible stores")
+        && exception.getMessage().contains("data range available: from")) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     private StoreClient switchClient() {
