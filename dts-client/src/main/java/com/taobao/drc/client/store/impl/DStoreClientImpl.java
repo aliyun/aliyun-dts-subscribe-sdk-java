@@ -72,8 +72,8 @@ public class DStoreClientImpl  extends AbstractStoreClient {
                 } catch (DStoreOffsetNotExistException e) {
                     throw e;
                 } catch (Throwable e) {
-                    e.printStackTrace();
                     log.info("DTSClient start failed,subTopic:" + topics[0] + ",error:[" + e.getMessage() + "]");
+                    throw e;
                 }
                 return callResult;
             }

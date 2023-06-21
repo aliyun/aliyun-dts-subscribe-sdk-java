@@ -43,7 +43,7 @@
     </developers>
 
     <properties>
-        <revision>1.1.11</revision>
+        <revision>1.1.12</revision>
         <project.build.sourceEncoding>US-ASCII</project.build.sourceEncoding>
         <maven.deploy.skip>false</maven.deploy.skip>
         <version.commons-logging>1.2</version.commons-logging>
