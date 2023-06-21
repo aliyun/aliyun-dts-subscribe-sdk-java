@@ -460,8 +460,9 @@ public class DRCClientImpl implements DRCClient {
     }
 
     private boolean ifExceptionCannotRetry(Throwable exception) {
-        if (exception.getMessage().contains(" Found no feasible stores")
-        && exception.getMessage().contains("data range available: from")) {
+        if (exception != null && exception.getMessage() != null
+           &&exception.getMessage().contains(" Found no feasible stores")
+           && exception.getMessage().contains("data range available: from")) {
             return true;
         } else {
             return false;
