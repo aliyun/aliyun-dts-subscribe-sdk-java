@@ -87,6 +87,8 @@ public class Constant {
 
     public final static String DATA_FLOW_RPS_LIMIT = "client.dataFlowRpsLimit";
 
+    public final static String WRITER_TYPE = "writer.type";
+
     /**
      * dstore fetch params
      */

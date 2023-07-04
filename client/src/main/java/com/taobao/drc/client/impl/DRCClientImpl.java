@@ -350,6 +350,10 @@ public class DRCClientImpl implements DRCClient {
         if (StringUtils.isNotBlank(dataFlowRps) && StringUtils.isNumeric(dataFlowRps)) {
             userConfig.setDataFlowRpsLimit(Integer.parseInt(dataFlowRps));
         }
+
+        if (properties.getProperty(WRITER_TYPE) != null) {
+            userConfig.setWriterType(properties.getProperty(WRITER_TYPE));
+        }
     }
 
     private void buildCheckpoint(Checkpoint checkpoint, String startingPoint, String instance) {

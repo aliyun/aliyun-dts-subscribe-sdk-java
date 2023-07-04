@@ -9,7 +9,7 @@ import com.taobao.drc.client.message.DataMessage;
 import java.util.Properties;
 
 public class DemoDRC {
-    private static String checkpointOfTimestamp = "1686402000";
+    private static String checkpointOfTimestamp = "1688458399";
     private static Listener messageListener = new Listener() {
         //异步通知
         @Override

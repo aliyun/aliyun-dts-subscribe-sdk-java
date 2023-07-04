@@ -114,6 +114,8 @@ public class UserConfig {
 
     private int dataFlowRpsLimit = -1;
 
+    private String writerType;
+
     public UserConfig(){
     }
 
@@ -209,6 +211,11 @@ public class UserConfig {
             if (messageType.equals(MessageType.BINARY)) {
                 params.put("writer.type", "data");
             }
+        }
+
+        //for ob store, if client set
+        if (writerType != null) {
+            params.put("writer.type", writerType);
         }
 
         if (blackList != null) {
@@ -647,5 +654,13 @@ public class UserConfig {
 
     public void setDataFlowRpsLimit(int dataFlowRpsLimit) {
         this.dataFlowRpsLimit = dataFlowRpsLimit;
+    }
+
+    public void setWriterType(String writerType) {
+        this.writerType = writerType;
+    }
+
+    public String getWriterType() {
+        return this.writerType;
     }
 }
