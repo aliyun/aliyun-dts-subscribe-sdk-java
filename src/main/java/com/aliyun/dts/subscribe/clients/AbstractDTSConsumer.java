@@ -3,7 +3,6 @@ package com.aliyun.dts.subscribe.clients;
 import com.aliyun.dts.subscribe.clients.check.CheckManager;
 import com.aliyun.dts.subscribe.clients.check.CheckResult;
 import com.aliyun.dts.subscribe.clients.check.DefaultCheckManager;
-import com.aliyun.dts.subscribe.clients.check.SubscribeAuthChecker;
 import com.aliyun.dts.subscribe.clients.check.SubscribeNetworkChecker;
 import com.aliyun.dts.subscribe.clients.common.RecordListener;
 import com.aliyun.dts.subscribe.clients.common.WorkThread;
@@ -75,8 +74,6 @@ public abstract class AbstractDTSConsumer implements DTSConsumer {
         CheckManager checkerManager = new DefaultCheckManager(consumerContext);
 
         checkerManager.addCheckItem(new SubscribeNetworkChecker(consumerContext.getBrokerUrl()));
-
-        checkerManager.addCheckItem(new SubscribeAuthChecker(consumerContext));
 
         CheckResult checkResult = checkerManager.check();
 
