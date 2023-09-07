@@ -43,11 +43,12 @@
     </developers>
 
     <properties>
-        <revision>1.1.13</revision>
+        <revision>1.2.0</revision>
         <project.build.sourceEncoding>US-ASCII</project.build.sourceEncoding>
         <maven.deploy.skip>false</maven.deploy.skip>
         <version.commons-logging>1.2</version.commons-logging>
         <version.fastjson>1.2.68.noneautotype</version.fastjson>
+        <version.togo>1.0.0.45</version.togo>
     </properties>
 
     <modules>
@@ -123,9 +124,9 @@
                 <version>1.0</version>
             </dependency>
             <dependency>
-                <groupId>com.taobao.togo</groupId>
-                <artifactId>clients</artifactId>
-                <version>1.0.0.40-SNAPSHOT</version>
+                <groupId>com.alibaba.dts.client</groupId>
+                <artifactId>togo-clients</artifactId>
+                <version>${version.togo}</version>
             </dependency>
             <dependency>
                 <groupId>com.google.guava</groupId>
