@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>dts-uniform-subscribe-sdk-network</artifactId>
+    <packaging>jar</packaging>
+
+    <parent>
+        <artifactId>dts-uniform-subscribe-sdk</artifactId>
+        <groupId>com.alibaba.dts.client</groupId>
+        <version>${revision}</version>
+    </parent>
+    <dependencies>
+        <dependency>
+            <groupId>com.alibaba.dts.client</groupId>
+            <artifactId>dts-uniform-subscribe-sdk-api</artifactId>
+            <version>${revision}</version>
+        </dependency>
+    </dependencies>
+
+
+</project>
