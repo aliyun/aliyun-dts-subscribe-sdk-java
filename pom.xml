@@ -47,7 +47,7 @@
         <project.build.sourceEncoding>US-ASCII</project.build.sourceEncoding>
         <maven.deploy.skip>false</maven.deploy.skip>
         <version.commons-logging>1.2</version.commons-logging>
-        <version.fastjson>1.2.68.noneautotype</version.fastjson>
+        <version.fastjson>1.2.69_noneautotype</version.fastjson>
         <version.togo>1.0.0.45</version.togo>
     </properties>
 
