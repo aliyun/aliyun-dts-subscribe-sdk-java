@@ -43,7 +43,7 @@
     </developers>
 
     <properties>
-        <revision>1.2.0</revision>
+        <revision>1.1.13-published-togo</revision>
         <project.build.sourceEncoding>US-ASCII</project.build.sourceEncoding>
         <maven.deploy.skip>false</maven.deploy.skip>
         <version.commons-logging>1.2</version.commons-logging>
