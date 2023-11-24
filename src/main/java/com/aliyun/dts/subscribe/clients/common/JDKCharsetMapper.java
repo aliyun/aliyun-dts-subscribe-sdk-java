@@ -46,6 +46,7 @@ public interface JDKCharsetMapper {
             put("utf32", "UTF-32");
             put("utf8", "UTF-8");
             put("utf8mb4", "UTF-8");
+            put("utf8mb3", "UTF-8");
             put("ucs2", "UnicodeBig");
         }
     };
