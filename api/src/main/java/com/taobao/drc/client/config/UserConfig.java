@@ -17,9 +17,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Created by jianjundeng on 3/3/15.
- */
 public class UserConfig {
 
     private Long id;
@@ -115,6 +112,8 @@ public class UserConfig {
     private int dataFlowRpsLimit = -1;
 
     private String writerType;
+
+    private boolean multiMode;
 
     public UserConfig(){
     }
@@ -662,5 +661,13 @@ public class UserConfig {
 
     public String getWriterType() {
         return this.writerType;
+    }
+
+    public boolean isMultiMode() {
+        return multiMode;
+    }
+
+    public void setMultiMode(boolean multiMode) {
+        this.multiMode = multiMode;
     }
 }
