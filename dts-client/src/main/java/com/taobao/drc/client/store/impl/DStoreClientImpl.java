@@ -101,7 +101,7 @@ public class DStoreClientImpl  extends AbstractStoreClient {
                                 UserConfig uc;
                                 if (!userConfigMap.containsKey(topic)) {
                                     uc = (UserConfig) BeanUtils.cloneBean(userConfig);
-                                    //uc.setMultiMode(true);
+                                    uc.setMultiMode(true);
                                     uc.setSubTopic(topic);
                                     /**
                                      * inner deep clone
@@ -110,7 +110,7 @@ public class DStoreClientImpl  extends AbstractStoreClient {
                                     userConfigMap.put(topic, uc);
 
                                     //checkpoint
-                                    CheckpointManager checkpointManager = new CheckpointManager();
+                                    CheckpointManager checkpointManager = new CheckpointManager(userConfig.isMultiMode());
                                     checkpointManager.setMultiMode(true);
                                     checkpointManagerMap.put(topic, checkpointManager);
                                 } else {

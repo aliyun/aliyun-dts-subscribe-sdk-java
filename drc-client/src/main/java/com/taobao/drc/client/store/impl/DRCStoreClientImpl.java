@@ -136,7 +136,7 @@ public class DRCStoreClientImpl extends AbstractStoreClient {
                                 if (!userConfigMap.containsKey(subTopic)) {
                                     validateDataFilter(subTopic);
                                     uc = (UserConfig) BeanUtils.cloneBean(userConfig);
-                                    //uc.setMultiMode(true);
+                                    uc.setMultiMode(true);
                                     uc.setSubTopic(subTopic);
                                     /**
                                      * inner deep clone
@@ -145,7 +145,7 @@ public class DRCStoreClientImpl extends AbstractStoreClient {
                                     userConfigMap.put(subTopic, uc);
 
                                     //checkpoint
-                                    CheckpointManager checkpointManager = new CheckpointManager();
+                                    CheckpointManager checkpointManager = new CheckpointManager(uc.isMultiMode());
                                     checkpointManager.setMultiMode(true);
                                     checkpointManagerMap.put(subTopic, checkpointManager);
                                 } else {
