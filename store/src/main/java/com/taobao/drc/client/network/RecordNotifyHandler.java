@@ -55,7 +55,7 @@ public class RecordNotifyHandler extends ChannelInboundHandlerAdapter {
 
         Attribute attr = ctx.channel().attr(Constant.configKey);
         userConfig = (UserConfig) attr.get();
-        helper = new RecordNotifyHelper(userConfig, new CheckpointManager(), messageListener);
+        helper = new RecordNotifyHelper(userConfig, new CheckpointManager(userConfig.isMultiMode()), messageListener);
         ctx.fireChannelActive();
         getStateChangeListener(ctx).onChannelActive(ctx.channel());
     }
