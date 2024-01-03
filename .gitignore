@@ -12,3 +12,5 @@ client/src/test/java/demo/aliyun/YanmenConsumerDemo.java
 dts-new-subscribe.log
 .flattened-pom.xml
 dts-new-subscribe.log*
+src
+

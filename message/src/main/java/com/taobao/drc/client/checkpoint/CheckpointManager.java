@@ -15,7 +15,8 @@ public class CheckpointManager {
 
     private boolean multiMode;
 
-    public CheckpointManager() {
+    public CheckpointManager(boolean multiMode) {
+        this.multiMode  = multiMode;
         header=new DataMessage.Record();
         header.setPrev(header);
         header.setNext(header);

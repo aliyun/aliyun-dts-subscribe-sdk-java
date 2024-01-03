@@ -54,8 +54,6 @@ public class DRCClientImpl implements DRCClient {
 
     private UserConfig userConfig = new UserConfig();
 
-    private CheckpointManager checkpointManager = new CheckpointManager();
-
     private Properties properties = new Properties();
 
     private Listener listener;
@@ -412,9 +410,9 @@ public class DRCClientImpl implements DRCClient {
                     try {
                         boolean callResult;
                         if (isMulti) {
-                            callResult = switchClient().startMultiService().call();
+                            callResult = switchClient(isMulti).startMultiService().call();
                         } else {
-                            callResult = switchClient().startService().call();
+                            callResult = switchClient(isMulti).startService().call();
                         }
                         if (callResult) {
                             retriedTimes = 0;
@@ -473,7 +471,8 @@ public class DRCClientImpl implements DRCClient {
         }
     }
 
-    private StoreClient switchClient() {
+    private StoreClient switchClient(boolean isMulti) {
+        CheckpointManager checkpointManager = new CheckpointManager(isMulti);
         SubscribeChannel oldChannel =  userConfig.getSubscribeChannel();
         SubscribeChannel channel = ClusterManagerFacade.askSubscribeChannelAndRedirect(userConfig);
         userConfig.setSubscribeChannel(channel);
