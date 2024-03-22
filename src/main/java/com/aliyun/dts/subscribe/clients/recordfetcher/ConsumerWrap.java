@@ -107,13 +107,9 @@ public abstract class ConsumerWrap implements Closeable {
                     }
 
                     if (partitions.contains(topicPartition)) {
-                        if (firstStart.compareAndSet(true, false)) {
-                            Checkpoint toSet = streamCheckpoint.get();
-                            setFetchOffsetByTimestamp(topicPartition, toSet);
-                            log.info("RecordFetcher consumer:  subscribe for [{}] with checkpoint [{}] first start", topicPartition, toSet);
-                        } else {
-                            log.info("RecordFetcher consumer:  subscribe for [{}]  reassign, do nothing", topicPartition);
-                        }
+                        Checkpoint toSet = streamCheckpoint.get();
+                        setFetchOffsetByTimestamp(topicPartition, toSet);
+                        log.info("RecordFetcher consumer:  subscribe for [{}] with checkpoint [{}] start", topicPartition, toSet);
                     }
                 }
             });
