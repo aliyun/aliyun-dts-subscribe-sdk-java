@@ -53,6 +53,8 @@ public class KafkaRecordFetcher implements Runnable, Closeable {
 
     private long nextCommitTimestamp;
 
+    private boolean isCheckpointNotExistThrowException;
+
     private final Sensor recordStoreInCountSensor;
     private final Sensor recordStoreInByteSensor;
 
@@ -79,7 +81,9 @@ public class KafkaRecordFetcher implements Runnable, Closeable {
             metaStoreCenter.registerStore(USER_STORE_NAME, consumerContext.getUserRegisteredStore());
         }
 
-        log.info("RecordGenerator: try time [" + tryTime + "], try backTimeMS [" + tryBackTimeMS + "]");
+        isCheckpointNotExistThrowException = consumerContext.isCheckpointNotExistThrowException();
+
+        log.info("RecordGenerator: try time [" + tryTime + "], try backTimeMS [" + tryBackTimeMS + "], isCheckpointNotExistThrowException [" + isCheckpointNotExistThrowException +  "]");
 
         Metrics metrics = consumerContext.getDtsMetrics().getCoreMetrics();
         this.recordStoreInCountSensor = metrics.sensor("record-store-in-row");
@@ -179,11 +183,11 @@ public class KafkaRecordFetcher implements Runnable, Closeable {
                         ret = initialCheckpoint;
                     }
                     return ret;
-                });
+                }, isCheckpointNotExistThrowException);
                 break;
             }
             case ASSIGN:{
-                kafkaConsumerWrap.assignTopic(topicPartition, checkpoint);
+                kafkaConsumerWrap.assignTopic(topicPartition, checkpoint, isCheckpointNotExistThrowException);
                 break;
             }
             default: {
