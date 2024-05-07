@@ -25,13 +25,13 @@ public abstract class ConsumerWrap implements Closeable {
 
     // directly set offset using the give offset, we don't check the offset is legal or not.
     public abstract void setFetchOffsetByOffset(TopicPartition topicPartition, Checkpoint checkpoint);
-    public abstract void setFetchOffsetByTimestamp(TopicPartition topicPartition, Checkpoint checkpoint);
+    public abstract void setFetchOffsetByTimestamp(TopicPartition topicPartition, Checkpoint checkpoint, boolean isCheckpointNotExistThrowException);
     // assign topic is not use auto balance, which we recommend this way to consume record. and commit offset by user it self
-    public abstract void assignTopic(TopicPartition topicPartition, Checkpoint checkpoint);
+    public abstract void assignTopic(TopicPartition topicPartition, Checkpoint checkpoint, boolean isCheckpointNotExistThrowException);
     // subscribe function use consumer group mode, which means multi consumer using the same groupid could build a high available consume system
     // still we recommend shutdown auto commit mode, and user commit the offset manually.
     // this can delay offset commit until the record is really consumed by business logic which can strongly defend the data loss.
-    public abstract void subscribeTopic(TopicPartition topicPartition, Supplier<Checkpoint> streamCheckpoint);
+    public abstract void subscribeTopic(TopicPartition topicPartition, Supplier<Checkpoint> streamCheckpoint, boolean isCheckpointNotExistThrowException);
 
 
     public abstract ConsumerRecords<byte[], byte[]> poll();
@@ -62,14 +62,18 @@ public abstract class ConsumerWrap implements Closeable {
 
         // recommended
         @Override
-        public void setFetchOffsetByTimestamp(TopicPartition topicPartition, Checkpoint checkpoint) {
+        public void setFetchOffsetByTimestamp(TopicPartition topicPartition, Checkpoint checkpoint, boolean isCheckpointNotExistThrowException) {
             long timeStamp = checkpoint.getTimeStamp();
             Map<TopicPartition, OffsetAndTimestamp> remoteOffset = consumer.offsetsForTimes(Collections.singletonMap(topicPartition, timeStamp));
             OffsetAndTimestamp toSet = remoteOffset.get(topicPartition);
             if (null == toSet) {
-                log.warn("Failed seek timestamp for topic [" + topicPartition + "] with timestamp [" + timeStamp + "] failed, set to beginning");
-                log.warn("Set to beginning");
-                consumer.seekToBeginning(Collections.singleton(topicPartition));
+                log.warn("Failed seek timestamp for topic [" + topicPartition + "] with timestamp [" + timeStamp + "] failed");
+                if (isCheckpointNotExistThrowException) {
+                    throw new RuntimeException("Failed seek timestamp for topic [\" + topicPartition + \"] with timestamp [\" + timeStamp + \"] failed");
+                } else {
+                    log.warn("Set to beginning");
+                    consumer.seekToBeginning(Collections.singleton(topicPartition));
+                }
             } else {
                 log.info("RecordFetcher: seek for {} with checkpoint {}", topicPartition, checkpoint);
 
@@ -78,19 +82,19 @@ public abstract class ConsumerWrap implements Closeable {
         }
 
         @Override
-        public void assignTopic(TopicPartition topicPartition, Checkpoint checkpoint) {
+        public void assignTopic(TopicPartition topicPartition, Checkpoint checkpoint, boolean isCheckpointNotExistThrowException) {
             consumer.assign(Arrays.asList(topicPartition));
 
             consumerContext.setTopicPartitions(Collections.singleton(topicPartition));
 
             log.info("RecordGenerator:  assigned for {} with checkpoint {}", topicPartition, checkpoint);
-            setFetchOffsetByTimestamp(topicPartition, checkpoint);
+            setFetchOffsetByTimestamp(topicPartition, checkpoint, isCheckpointNotExistThrowException);
         }
 
 
         //Not test, please not use this function
         @Override
-        public void subscribeTopic(TopicPartition topicPartition, Supplier<Checkpoint> streamCheckpoint) {
+        public void subscribeTopic(TopicPartition topicPartition, Supplier<Checkpoint> streamCheckpoint, boolean isCheckpointNotExistThrowException) {
             consumer.subscribe(Arrays.asList(topicPartition.topic()), new ConsumerRebalanceListener() {
                 @Override
                 public void onPartitionsRevoked(Collection<TopicPartition> partitions) {
@@ -108,7 +112,7 @@ public abstract class ConsumerWrap implements Closeable {
 
                     if (partitions.contains(topicPartition)) {
                         Checkpoint toSet = streamCheckpoint.get();
-                        setFetchOffsetByTimestamp(topicPartition, toSet);
+                        setFetchOffsetByTimestamp(topicPartition, toSet, isCheckpointNotExistThrowException);
                         log.info("RecordFetcher consumer:  subscribe for [{}] with checkpoint [{}] start", topicPartition, toSet);
                     }
                 }

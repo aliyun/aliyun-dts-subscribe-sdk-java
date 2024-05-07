@@ -41,6 +41,8 @@ public class ConsumerContext {
 
     private boolean useLocalCheckpointStore = true;
 
+    private boolean isCheckpointNotExistThrowException;
+
     public ConsumerContext(String brokerUrl, String topic, String sid, String userName, String password,
                            String initialCheckpoint, ConsumerContext.ConsumerSubscribeMode subscribeMode) {
         this(null, brokerUrl, topic, sid, userName, password, initialCheckpoint, subscribeMode, new Properties());
@@ -48,6 +50,12 @@ public class ConsumerContext {
 
     public ConsumerContext(DBMapper dbMapper, String brokerUrl, String topic, String sid, String userName, String password,
                            String initialCheckpoint, ConsumerContext.ConsumerSubscribeMode subscribeMode, Properties properties) {
+        this(dbMapper, brokerUrl, topic, sid, userName, password, initialCheckpoint, subscribeMode, new Properties(), false);
+    }
+
+    public ConsumerContext(DBMapper dbMapper, String brokerUrl, String topic, String sid, String userName, String password,
+                           String initialCheckpoint, ConsumerContext.ConsumerSubscribeMode subscribeMode, Properties properties,
+                           boolean isCheckpointNotExistThrowException) {
         this.properties = properties;
         this.dbMapper = dbMapper;
         this.brokerUrl = brokerUrl;
@@ -59,6 +67,7 @@ public class ConsumerContext {
         this.subscribeMode = subscribeMode;
         this.dtsMetrics = new DTSMetrics();
         this.useLocalCheckpointStore = true;
+        this.isCheckpointNotExistThrowException = isCheckpointNotExistThrowException;
     }
 
     public DBMapper getDbMapper() {
@@ -199,6 +208,10 @@ public class ConsumerContext {
 
     public void setUseLocalCheckpointStore(boolean useLocalCheckpointStore) {
         this.useLocalCheckpointStore = useLocalCheckpointStore;
+    }
+
+    public boolean isCheckpointNotExistThrowException() {
+        return isCheckpointNotExistThrowException;
     }
 
     public enum ConsumerSubscribeMode {
