@@ -200,6 +200,7 @@ public class DStoreAvroRecord extends DataMessage.Record {
 
     @Override
     public List<Field> getFieldList() {
+        initBody();
         List<RecordField> fields = null != schema ? schema.getFields() : new ArrayList<RecordField>();
         List<Field> fieldValues = new ArrayList<Field>(fields.size());
         boolean existsBefore = null != beforeRowImage;
