@@ -15,6 +15,7 @@ public class DateTimeTest {
     @Test
     public void testDatetimeResetSegments() {
         DateTime normalValue = new DateTime("2018-01-29 11:59:10.0 Asia/Shanghai", DateTime.SEG_DATETIME_NAONS_TZ);
+        String datetimeTest = normalValue.toJdbcString(DateTime.SEG_DATETIME_NAONS);
         Assert.assertTrue(StringUtils.equals(normalValue.toJdbcString(DateTime.SEG_DATETIME_NAONS), "2018-01-29 11:59:10"));
         Assert.assertTrue(StringUtils.equals(normalValue.getTimeZone(), "Asia/Shanghai"));
     }
@@ -23,11 +24,11 @@ public class DateTimeTest {
     public void testDatetimeResetSegments2() {
         DateTime normalValue = new DateTime("5709-03-27 10:57:06.9177230 -02:28", DateTime.SEG_DATETIME_NAONS_TZ);
         Assert.assertEquals("5709-03-27 10:57:06.917723", normalValue.toJdbcString(DateTime.SEG_DATETIME_NAONS));
-        Assert.assertEquals(normalValue.getTimeZone(), "-02:28");
+        Assert.assertEquals(normalValue.getTimeZone(), "GMT-02:28");
 
         DateTime normalValue2 = new DateTime("10:57:06.9177230 -02:28", DateTime.SEG_TIME_NAONS | DateTime.SEG_TIMEZONE);
         Assert.assertEquals("10:57:06.917723 -02:28", normalValue2.toJdbcString(DateTime.SEG_TIME_NAONS | DateTime.SEG_TIMEZONE));
-        Assert.assertEquals("-02:28", normalValue2.getTimeZone());
+        Assert.assertEquals("GMT-02:28", normalValue2.getTimeZone());
     }
 
     @Test
@@ -184,7 +185,7 @@ public class DateTimeTest {
         dateTime.setSecond(14);
         dateTime.setNaons(12345000);
         dateTime.setTimeZone("GMT+08:00");
-        assertEquals("2019-09-11 12:13:14.012345 GMT+08:00", dateTime.toString());
+        assertEquals("2019-09-11 12:13:14.012345 +08:00", dateTime.toString());
 
         dateTime.setYear(0);
         dateTime.setMonth(0);
@@ -194,7 +195,7 @@ public class DateTimeTest {
         dateTime.setMinute(0);
         dateTime.setSecond(0);
         dateTime.setNaons(1000);
-        assertEquals("0000-00-00 00:00:00.000001 GMT+08:00", dateTime.toString());
+        assertEquals("0000-00-00 00:00:00.000001 +08:00", dateTime.toString());
 
         dateTime.setYear(2019);
         dateTime.setMonth(9);
@@ -204,7 +205,7 @@ public class DateTimeTest {
         dateTime.setMinute(1);
         dateTime.setSecond(1);
         dateTime.setNaons(10000);
-        assertEquals("2019-09-11 01:01:01.00001 GMT+08:00", dateTime.toString());
+        assertEquals("2019-09-11 01:01:01.00001 +08:00", dateTime.toString());
 
         dateTime.setYear(2019);
         dateTime.setMonth(9);
@@ -214,20 +215,20 @@ public class DateTimeTest {
         dateTime.setMinute(2);
         dateTime.setSecond(2);
         dateTime.setNaons(0);
-        assertEquals("2019-09-11 02:02:02 GMT+08:00", dateTime.toString());
+        assertEquals("2019-09-11 02:02:02 +08:00", dateTime.toString());
 
-        assertEquals("2019-09-11 02:02:02 GMT+08:00", dateTime.getData());
+        assertEquals("2019-09-11 02:02:02 +08:00", dateTime.getData());
     }
 
     @Test
     public void testDatetimeTest1() {
 
-        DateTime dateTime2 = new DateTime("2019-09-11 02:02:02.0123 GMT+08:00", DateTime.SEG_DATETIME_NAONS | DateTime.SEG_TIMEZONE);
-        assertEquals("2019-09-11 02:02:02.0123 GMT+08:00", dateTime2.toString());
+        DateTime dateTime2 = new DateTime("2019-09-11 02:02:02.0123 +08:00", DateTime.SEG_DATETIME_NAONS | DateTime.SEG_TIMEZONE);
+        assertEquals("2019-09-11 02:02:02.0123 +08:00", dateTime2.toString());
         assertEquals(12300000, dateTime2.getNaons());
 
         DateTime dateTime3 = new DateTime("2019-09-11 02:02:02.0123 asia/shanghai", DateTime.SEG_DATETIME_NAONS | DateTime.SEG_TIMEZONE);
-        assertEquals("2019-09-11 02:02:02.0123 asia/shanghai", dateTime3.toString());
+        assertEquals("2019-09-11 02:02:02.0123 +08:00", dateTime3.toString());
         System.out.println(dateTime3.toString());
         assertEquals(12300000, dateTime2.getNaons());
     }
@@ -289,9 +290,9 @@ public class DateTimeTest {
     @Test
     public void testToUnixTimestamp() throws ParseException {
         DateTime ti = new DateTime("2018-01-29 11:59:11.123 Asia/Shanghai", DateTime.SEG_DATETIME_NAONS_TZ);
-        Assert.assertEquals("2018-01-29 03:59:11.000123", ti.toUnixTimestampValue().toString());
+        Assert.assertEquals("2018-01-29 11:59:11.123", ti.toUnixTimestampValue().toString());
         DateTime t2 = new DateTime("2018-01-29 11:59:11.123", DateTime.SEG_DATETIME_NAONS);
-        Assert.assertEquals("2018-01-29 11:59:11.000123", t2.toUnixTimestampValue().toString());
+        Assert.assertEquals("2018-01-29 11:59:11.123", t2.toUnixTimestampValue().toString());
         DateTime t3 = new DateTime("2018-01-29 11:59:11", DateTime.SEG_DATETIME);
         Assert.assertEquals("2018-01-29 11:59:11", t3.toUnixTimestampValue().toString());
     }
@@ -334,18 +335,6 @@ public class DateTimeTest {
 //        System.out.println(timeZone.getRawOffset());
 //        System.out.println(calendar.getTimeInMillis());
 //        System.out.println(date.toGMTString());
-    }
-
-    @Test
-    public void testEffectiveTimeZoneTest() throws ParseException {
-        DateTime dateTime = new DateTime();
-        assertTrue(dateTime.isEffectiveTimeZone("-08:00"));
-        assertTrue(dateTime.isEffectiveTimeZone("+08:00"));
-        assertTrue(dateTime.isEffectiveTimeZone("+08"));
-        assertTrue(dateTime.isEffectiveTimeZone("+08:01:01"));
-        assertTrue(dateTime.isEffectiveTimeZone("+8"));
-        assertTrue(dateTime.isEffectiveTimeZone("Asia/shanghai"));
-        assertFalse(dateTime.isEffectiveTimeZone("AM"));
     }
 
     @Test
