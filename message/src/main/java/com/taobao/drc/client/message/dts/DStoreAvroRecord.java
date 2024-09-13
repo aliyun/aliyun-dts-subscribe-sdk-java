@@ -228,7 +228,7 @@ public class DStoreAvroRecord extends DataMessage.Record {
             DateTime dateTime = new DateTime(byteString.toString(), DateTime.SEG_DATETIME_NAONS);
             byte[] data = byteString.getBytes();
             try {
-                long timestamp = dateTime.toUnixTimestamp();
+                long timestamp = dateTime.toEpochMilliSeconds();
                 timestamp = (timestamp + "").length() == 13 ? timestamp / 1000 : timestamp;
                 data = (timestamp + "").getBytes();
             } catch (ParseException e) {

@@ -1,21 +1,46 @@
 package com.taobao.drc.client.message.dts.record.value;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Triple;
+
 import sun.util.calendar.ZoneInfoFile;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.time.ZoneId;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.TimeZone;
+import java.util.TreeMap;
+import java.util.concurrent.TimeUnit;
 
 public class DateTime implements Value<String> {
 
-    private static Set<String> timeZoneNames = new HashSet<String>();
-    private static Set<String> commonEraNames = new HashSet<String>(17);
+    private static Map<String, String> timeZoneOffsets = new TreeMap();
+    private static Set<String> commonEraNames = new HashSet<>(17);
+    private static ThreadLocal<SimpleDateFormat> dateFormat = new ThreadLocal<>();
 
     static {
         for (Map.Entry<String, String> kv : ZoneInfoFile.getAliasMap().entrySet()) {
-            timeZoneNames.add(kv.getKey().toLowerCase());
-            timeZoneNames.add(kv.getValue().toLowerCase());
+            StringBuilder sbl = new StringBuilder(16);
+            String tzID = kv.getKey();
+            TimeZone zone = TimeZone.getTimeZone(tzID);
+            int rawOffset = zone.getRawOffset();
+            sbl.append(rawOffset < 0 ? '-' : '+');
+            long minutes = TimeUnit.MILLISECONDS.toMinutes(rawOffset);
+            sbl.append(TimeUnit.MINUTES.toHours(minutes));
+            if (sbl.length() < 3) {
+                sbl.insert(sbl.length() - 1, '0');
+            }
+            sbl.append(":").append(minutes % 60);
+            if (sbl.length() < 6) {
+                sbl.insert(sbl.length(), '0');
+            }
+            final String timeOffset = sbl.toString();
+            timeZoneOffsets.put(kv.getKey().toLowerCase(), timeOffset);
+            timeZoneOffsets.put(kv.getValue().toLowerCase(), timeOffset);
         }
         commonEraNames.add("AD");
         commonEraNames.add("ad");
@@ -28,8 +53,8 @@ public class DateTime implements Value<String> {
         commonEraNames.add(" BC");
     }
 
-    private static final String BC = "BC";
-    private static final String AD = "AD";
+    public static final String BC = "BC";
+    public static final String AD = "AD";
 
     public static final int SEG_NEGATIVE = 0x1;
     public static final int SEG_YEAR = 0x2;
@@ -62,6 +87,7 @@ public class DateTime implements Value<String> {
 
     private String datetime;
 
+    private String timeOffset;
     private String timeZone;
     private String commonEra;
     private int segments; // bitmap(negative,year,day,hour,minite,second,micro,naons,timeZone)
@@ -181,12 +207,20 @@ public class DateTime implements Value<String> {
         this.datetime = datetime;
     }
 
-    public String getTimeZone() {
-        return timeZone;
+    public void setTimeZone(String timeZone) {
+        Triple<Boolean, StringBuilder, StringBuilder> zoneTriple = validateAndConvertTimeZone(timeZone);
+        if (zoneTriple.getLeft()) {
+            this.timeOffset = zoneTriple.getMiddle().toString();
+            this.timeZone = zoneTriple.getRight().toString();
+        }
     }
 
-    public void setTimeZone(String timeZone) {
-        this.timeZone = timeZone;
+    public String getTimeOffset() {
+        return timeOffset;
+    }
+
+    public String getTimeZone() {
+        return timeZone;
     }
 
     public int getSegments() {
@@ -215,21 +249,26 @@ public class DateTime implements Value<String> {
     }
 
     public UnixTimestamp toUnixTimestampValue() throws ParseException {
-        long timestamp = toUnixTimestamp();
-        String timestampString = String.valueOf(timestamp);
-        String timestampSec = timestampString.substring(0, 10);
-        String timestampMicro = "0";
-        if (timestampString.length() > 10) {
-            timestampMicro = timestampString.substring(10, timestampString.length());
-        }
-        return new UnixTimestamp(Long.parseLong(timestampSec), Integer.parseInt(timestampMicro));
+        long timestampSeconds = toEpochMilliSeconds() / 1000;
+        int microSeconds = getNaons() / 1000;
+        return new UnixTimestamp(timestampSeconds, microSeconds);
     }
 
-    public long toUnixTimestamp() throws ParseException {
-        String parseTimeZone = getTimeZone();
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+    public long toEpochMilliSeconds() throws ParseException {
+        String parseTimeZone = getTimeOffset();
+        SimpleDateFormat sdf = dateFormat.get();
+
+        // construct sdf if needed
+        if (null == sdf) {
+            sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+            dateFormat.set(sdf);
+        }
+
+        String org = toJdbcString(DateTime.SEG_DATETIME_NAONS, false);
+        String orgEndMilliSecond = StringUtils.substring(org, 0, org.length() - 6);
+
         if (null == parseTimeZone || parseTimeZone.trim().isEmpty()) {
-            Date date = sdf.parse(toJdbcString(DateTime.SEG_DATETIME_NAONS));
+            Date date = sdf.parse(orgEndMilliSecond);
             return date.getTime();
         }
 
@@ -241,14 +280,20 @@ public class DateTime implements Value<String> {
         if (parseTimeZone.length() == 5) {
             parseTimeZone = "+0" + parseTimeZone.substring(1);
         }
-        TimeZone timeZone = TimeZone.getTimeZone(parseTimeZone);
-        sdf.setTimeZone(timeZone);
-        Date date = sdf.parse(toJdbcString(DateTime.SEG_DATETIME_NAONS));
-        return date.getTime() - timeZone.getRawOffset();
+        ZoneId zoneId = ZoneId.of(parseTimeZone);
+        TimeZone timeZone = TimeZone.getTimeZone(zoneId);
+        if (sdf.getTimeZone() != timeZone) {
+            sdf.setTimeZone(timeZone);
+        }
+        Date date = sdf.parse(orgEndMilliSecond);
+        return date.getTime();
     }
 
     public String toJdbcString(int segments) {
+        return toJdbcString(segments, true);
+    }
 
+    private String toJdbcString(int segments, boolean trimTrailingZero) {
         StringBuffer datatimeBuf = new StringBuffer(32);
         if (isSet(segments, SEG_YEAR)) {
             int yearV = this.year > 0 ? this.year : -this.year;
@@ -315,27 +360,53 @@ public class DateTime implements Value<String> {
         }
 
         if (isSet(segments, SEG_NAONS)) {
-            String zeros = "000000000";
             int naonsV = this.naons > 0 ? this.naons : -this.naons;
-            String naonsString = Integer.toString(naonsV);
-            naonsString = zeros.substring(0, (9 - naonsString.length())) + naonsString;
+            int trailZeroCount = 0;
+            int remainingNumberCount = 0;
 
-            char[] nanosChar = new char[naonsString.length()];
-            naonsString.getChars(0, naonsString.length(), nanosChar, 0);
-            int truncIndex = 8;
-            while (nanosChar[truncIndex] == '0' && truncIndex > 0) {
-                truncIndex--;
+            if (0 == naonsV) {
+                trailZeroCount = 8;
+                remainingNumberCount = 1;
+            } else {
+                while (0 == (naonsV % 10)) {
+                    trailZeroCount++;
+                    naonsV /= 10;
+                }
+                int tmp = naonsV;
+                while (tmp > 0) {
+                    remainingNumberCount++;
+                    tmp /= 10;
+                }
             }
-            naonsString = new String(nanosChar, 0, truncIndex + 1);
 
-            //when nanosString is 0, do not output it
-            if (!"0".equals(naonsString)) {
-                datatimeBuf.append(".").append(naonsString);
+            if (!trimTrailingZero) {
+                datatimeBuf.append(".");
+                int prefixPadZeroNumber = 9 - trailZeroCount - remainingNumberCount;
+                while (prefixPadZeroNumber > 0) {
+                    datatimeBuf.append("0");
+                    prefixPadZeroNumber--;
+                }
+                datatimeBuf.append(naonsV);
+
+                while (trailZeroCount > 0) {
+                    datatimeBuf.append('0');
+                    trailZeroCount--;
+                }
+            } else {
+                if (0 != naonsV) {
+                    datatimeBuf.append(".");
+                    int prefixPadZeroNumber = 9 - trailZeroCount - remainingNumberCount;
+                    while (prefixPadZeroNumber > 0) {
+                        datatimeBuf.append("0");
+                        prefixPadZeroNumber--;
+                    }
+                    datatimeBuf.append(naonsV);
+                }
             }
         }
 
-        if (isSet(segments, SEG_TIMEZONE) && timeZone != null) {
-            datatimeBuf.append(" ").append(timeZone);
+        if (isSet(segments, SEG_TIMEZONE) && timeOffset != null) {
+            datatimeBuf.append(" ").append(timeOffset);
         }
 
         if (isSet(segments, SEG_COMMON_ERA) && null != commonEra) {
@@ -355,25 +426,200 @@ public class DateTime implements Value<String> {
         return time;
     }
 
-    protected boolean isEffectiveTimeZone(String timeZone) {
-        if (null == timeZone || timeZone.length() <= 0) {
-            return false;
+    /**
+     * check if @timeZone is valid, and convert it to time offset with ISO format.
+     * the curved time offset should be the format likes +08:00 or +08:20:30.
+     */
+    Triple<Boolean, StringBuilder, StringBuilder> validateAndConvertTimeZone(String timeZone) {
+        if (StringUtils.isEmpty(timeZone)) {
+            return Triple.of(false, null, null);
         }
-        if (StringUtils.startsWith(timeZone, "GMT")
-                || StringUtils.startsWith(timeZone, "UTC")) {
-            return true;
-        }
-        char c = timeZone.charAt(0);
-        if ('-' == c || '+' == c) {
-            for (int i = 1; i < timeZone.length(); ++i) {
-                if (('0' > timeZone.charAt(i) || '9' < timeZone.charAt(i)) && ':' != timeZone.charAt(i)) {
-                    return false;
+
+        char charValue;
+        boolean isLegalTimeZone = false;
+        int index = 0;
+        final int totalLength = timeZone.length();
+        final StringBuilder sbl = new StringBuilder(16);
+        final StringBuilder tzSbl = new StringBuilder(16);
+        charValue = timeZone.charAt(index);
+
+        check_and_fix:
+        {
+            // check first letter
+            switch (charValue) {
+                case 'G':
+                    if ('M' != timeZone.charAt(++index)) {
+                        break check_and_fix;
+                    }
+                    if ('T' != timeZone.charAt(++index)) {
+                        break check_and_fix;
+                    }
+                    tzSbl.append("GMT");
+                    ++index;
+                    break;
+                case 'U':
+                    // short path for UTC
+                    if ('T' != timeZone.charAt(++index)) {
+                        break check_and_fix;
+                    }
+                    if ('C' != timeZone.charAt(++index)) {
+                        break check_and_fix;
+                    }
+                    tzSbl.append("UTC");
+                    ++index;
+                    break;
+                case '+':
+                case '-':
+                    // add default timezone specification
+                    tzSbl.append("GMT");
+                    break;
+                default:
+                    if ('0' <= charValue && '9' >= charValue) {
+                        tzSbl.append("GMT");
+                        break;
+                    } else {
+                        final String tmpOffset = timeZoneOffsets.getOrDefault(timeZone.toLowerCase(), null);
+                        if (null == tmpOffset) {
+                            break check_and_fix;
+                        } else {
+                            // special time zone, convert it to time offset
+                            isLegalTimeZone = true;
+                            sbl.append(tmpOffset);
+                            tzSbl.append(timeZone);
+                            break check_and_fix;
+                        }
+                    }
+            }
+
+            // check remaining letters
+            /**
+             * we use a state machine to do the checking and fixing:
+             *
+             *                       SUCCESS_FIN <---| <-----------------|
+             *                           ^           |                   |
+             *                          e|           |e                  |e
+             *                   0~9     |     0~9   |    :        0~9   |    0~9       :         0~9       0~9       e
+             * 0 --------> 1 ----------> 2 --------> 3 ------> 4 ------> 5 ------> 6 -------> 7 ------> 8 ------> 9 ----> SUCCESS_FIN
+             * |                       |  |               ^
+             * |                       |  |       :       |
+             * |                       |  |---------------|
+             * |                       |
+             * |      others           V
+             * |--------------> ERROR_FIN
+             */
+            int processingState = 0;
+            while (index < totalLength) {
+                charValue = timeZone.charAt(index++);
+                switch (processingState) {
+                    case 0:
+                        if (' ' == charValue) {
+                            processingState = 0;
+                        } else if ('+' == charValue || '-' == charValue) {
+                            sbl.append(charValue);
+                            processingState = 1;
+                        } else if ('0' <= charValue && '9' >= charValue) {
+                            sbl.append("+");
+                            sbl.append(charValue);
+                            processingState = 2;
+                        } else {
+                            break check_and_fix;
+                        }
+                        break;
+                    case 1:
+                        if ('0' <= charValue && '9' >= charValue) {
+                            sbl.append(charValue);
+                            processingState = 2;
+                        } else {
+                            break check_and_fix;
+                        }
+                        break;
+                    case 2:
+                        if ('0' <= charValue && '9' >= charValue) {
+                            sbl.append(charValue);
+                            processingState = 3;
+                        } else if (':' == charValue) {
+                            sbl.insert(sbl.length() - 1, '0');
+                            sbl.append(charValue);
+                            processingState = 4;
+                        } else {
+                            break check_and_fix;
+                        }
+                        break;
+                    case 3:
+                        if (':' == charValue) {
+                            sbl.append(charValue);
+                            processingState = 4;
+                        } else {
+                            break check_and_fix;
+                        }
+                        break;
+                    case 4:
+                        if ('0' <= charValue && '9' >= charValue) {
+                            sbl.append(charValue);
+                            processingState = 5;
+                        } else {
+                            break check_and_fix;
+                        }
+                        break;
+                    case 5:
+                        if ('0' <= charValue && '9' >= charValue) {
+                            sbl.append(charValue);
+                            processingState = 6;
+                        } else {
+                            break check_and_fix;
+                        }
+                        break;
+                    case 6:
+                        if (':' == charValue) {
+                            processingState = 7;
+                            sbl.append(charValue);
+                        } else {
+                            break check_and_fix;
+                        }
+                        break;
+                    case 7:
+                        if ('0' <= charValue && '9' >= charValue) {
+                            sbl.append(charValue);
+                            processingState = 8;
+                        } else {
+                            break check_and_fix;
+                        }
+                        break;
+                    case 8:
+                        if ('0' <= charValue && '9' >= charValue) {
+                            sbl.append(charValue);
+                            processingState = 9;
+                        } else {
+                            break check_and_fix;
+                        }
+                        break;
+                    default:
+                        break check_and_fix;
                 }
             }
-            return true;
-        } else {
-            return timeZoneNames.contains(timeZone.toLowerCase());
+            // here we process the e input for state
+            switch (processingState) {
+                case 0:
+                    sbl.append('+');
+                    sbl.append('0');
+                case 2:
+                    sbl.insert(sbl.length() - 1, '0');
+                case 3:
+                    sbl.append(":00");
+                    tzSbl.append(sbl);
+                    isLegalTimeZone = true;
+                    break;
+                case 5:
+                case 8:
+                    sbl.insert(sbl.length() - 1, '0');
+                case 6:
+                case 9:
+                    tzSbl.append(sbl);
+                    isLegalTimeZone = true;
+                    break;
+            }
         }
+        return Triple.of(isLegalTimeZone, sbl, tzSbl);
     }
 
     protected void parseJdbcDatetime(String datetime) {
@@ -403,10 +649,12 @@ public class DateTime implements Value<String> {
                 }
             }
             if (index >= 0) {
-                String timeZone = datetime.substring(index);
-                if (isEffectiveTimeZone(timeZone.trim())) {
-                    this.setTimeZone(timeZone.trim());
-                    datetime = datetime.substring(0, datetime.length() - timeZone.length()).trim();
+                String rawTimeZone = datetime.substring(index);
+                Triple<Boolean, StringBuilder, StringBuilder> normalizedTimeZone = validateAndConvertTimeZone(rawTimeZone.trim());
+                if (normalizedTimeZone.getLeft()) {
+                    this.timeOffset = normalizedTimeZone.getMiddle().toString();
+                    this.timeZone = normalizedTimeZone.getRight().toString();
+                    datetime = datetime.substring(0, datetime.length() - rawTimeZone.length()).trim();
                 }
             }
         }
@@ -474,24 +722,30 @@ public class DateTime implements Value<String> {
 
     public static boolean isZeroDate(String value) {
         return "0000-00-00".equalsIgnoreCase(value)
-            || "0000-00-00 00:00:00".equalsIgnoreCase(value)
-            || "0000-00-00 00:00:00.0".equalsIgnoreCase(value)
-            || "0000-00-00 00:00:00.00".equalsIgnoreCase(value)
-            || "0000-00-00 00:00:00.000".equalsIgnoreCase(value)
-            || "0000-00-00 00:00:00.0000".equalsIgnoreCase(value)
-            || "0000-00-00 00:00:00.00000".equalsIgnoreCase(value)
-            || "0000-00-00 00:00:00.000000".equalsIgnoreCase(value);
+                || "0000-00-00 00:00:00".equalsIgnoreCase(value)
+                || "0000-00-00 00:00:00.0".equalsIgnoreCase(value)
+                || "0000-00-00 00:00:00.00".equalsIgnoreCase(value)
+                || "0000-00-00 00:00:00.000".equalsIgnoreCase(value)
+                || "0000-00-00 00:00:00.0000".equalsIgnoreCase(value)
+                || "0000-00-00 00:00:00.00000".equalsIgnoreCase(value)
+                || "0000-00-00 00:00:00.000000".equalsIgnoreCase(value);
     }
 
     @Override
     public long size() {
-        return StringUtils.length(datetime) + StringUtils.length(timeZone) + Integer.BYTES * 8;
+        return StringUtils.length(datetime) + StringUtils.length(timeOffset) + Integer.BYTES * 8;
     }
 
     @Override
     public DateTime parse(Object rawData) {
-        DateTime newDateTime = new DateTime();
-        newDateTime.parseJdbcDatetime(rawData.toString());
-        return newDateTime;
+        if (null == rawData) {
+            return null;
+        } else if (rawData instanceof DateTime) {
+            return (DateTime) rawData;
+        } else {
+            DateTime newDateTime = new DateTime(rawData.toString(), this.segments);
+            return newDateTime;
+        }
     }
 }
+
