@@ -217,6 +217,10 @@
                                     <pattern>common.message</pattern>
                                     <shadedPattern>com.aliyun.dts.shaded.common.message</shadedPattern>
                                 </relocation>
+                                <relocation>
+                                    <pattern>org.slf4j</pattern>
+                                    <shadedPattern>com.aliyun.dts.shaded.org.slf4j</shadedPattern>
+                                </relocation>
                             </relocations>
                         </configuration>
                     </execution>
