@@ -10,7 +10,7 @@
     <packaging>jar</packaging>
     <groupId>com.aliyun.dts</groupId>
     <artifactId>dts-new-subscribe-sdk</artifactId>
-    <version>2.1.2-shaded</version>
+    <version>2.1.4-shaded</version>
 
     <!-- licenses, licenses, scm tags are needed by public maven deploying-->
     <licenses>
@@ -211,17 +211,138 @@
                             <relocations>
                                 <relocation>
                                     <pattern>org.apache.kafka</pattern>
-                                    <shadedPattern>com.aliyun.dts.shaded.org.apache.kafka</shadedPattern>
+                                    <shadedPattern>shaded.org.apache.kafka</shadedPattern>
                                 </relocation>
                                 <relocation>
                                     <pattern>common.message</pattern>
-                                    <shadedPattern>com.aliyun.dts.shaded.common.message</shadedPattern>
+                                    <shadedPattern>shaded.common.message</shadedPattern>
                                 </relocation>
                                 <relocation>
                                     <pattern>org.slf4j</pattern>
-                                    <shadedPattern>com.aliyun.dts.shaded.org.slf4j</shadedPattern>
+                                    <shadedPattern>shaded.org.slf4j</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.apache.avro</pattern>
+                                    <shadedPattern>shaded.org.apache.avro</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.apache.commons</pattern>
+                                    <shadedPattern>shaded.org.apache.commons</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.apache.https</pattern>
+                                    <shadedPattern>shaded.org.apache.https</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.apache.http</pattern>
+                                    <shadedPattern>shaded.org.apache.http</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.apache.log4j</pattern>
+                                    <shadedPattern>shaded.org.apache.log4j</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>io.opentracing</pattern>
+                                    <shadedPattern>shaded.io.opentracing</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>net.jpountz</pattern>
+                                    <shadedPattern>shaded.net.jpountz</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>com.alibaba</pattern>
+                                    <shadedPattern>shaded.com.alibaba</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>com.aliyuncs</pattern>
+                                    <shadedPattern>shaded.com.aliyuncs</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>com.github</pattern>
+                                    <shadedPattern>shaded.com.github</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>com.google</pattern>
+                                    <shadedPattern>shaded.com.google</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>com.thoughtworks</pattern>
+                                    <shadedPattern>shaded.com.thoughtworks</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>com.vividsolutions</pattern>
+                                    <shadedPattern>shaded.com.vividsolutions</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>com.vladium</pattern>
+                                    <shadedPattern>shaded.com.vladium</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>javax.activation</pattern>
+                                    <shadedPattern>shaded.javax.activation</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.checkerframework</pattern>
+                                    <shadedPattern>shaded.org.checkerframework</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.codehaus</pattern>
+                                    <shadedPattern>shaded.org.codehaus</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.ini4j</pattern>
+                                    <shadedPattern>shaded.org.ini4j</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.jacoco</pattern>
+                                    <shadedPattern>shaded.org.jacoco</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.tukaani</pattern>
+                                    <shadedPattern>shaded.org.tukaani</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.xerial</pattern>
+                                    <shadedPattern>shaded.org.xerial</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>javax.xml.bind</pattern>
+                                    <shadedPattern>shaded.javax.xml.bind</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>avro.shaded.com.google.common</pattern>
+                                    <shadedPattern>shaded.avro.shaded.com.google.common</shadedPattern>
                                 </relocation>
                             </relocations>
+
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <includes>
+                                        <include>**</include>
+                                    </includes>
+                                    <excludes>
+                                        <exclude>aix/**</exclude>
+                                        <exclude>darwin/**</exclude>
+                                        <exclude>freebsd/**</exclude>
+                                        <exclude>include/**</exclude>
+                                        <exclude>linux/**</exclude>
+                                        <exclude>META-INF/**</exclude>
+                                        <exclude>mozilla/**</exclude>
+                                        <exclude>win/**</exclude>
+                                        <exclude>kafka/**</exclude>
+                                        <exclude>MANIFEST.MF</exclude>
+                                        <exclude>about.html</exclude>
+                                        <exclude>Doxyfile</exclude>
+                                        <exclude>endpoints.json</exclude>
+                                        <exclude>jump-workbench-properties.xml</exclude>
+                                        <exclude>endpoints.json</exclude>
+                                        <exclude>LICENSE</exclude>
+                                        <exclude>NOTICE</exclude>
+                                        <exclude>project.properties</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
                         </configuration>
                     </execution>
                 </executions>
