@@ -23,7 +23,7 @@ public class DefaultDistributedDTSConsumer implements DistributedDTSConsumer {
 
 
     private int corePoolSize = 8;
-    private int maximumPoolSize = 8;
+    private int maximumPoolSize = 64;
     private ThreadPoolExecutor executor;
     private volatile boolean isClosePoolExecutor = false;
 
