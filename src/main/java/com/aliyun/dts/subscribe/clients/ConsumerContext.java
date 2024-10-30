@@ -50,7 +50,7 @@ public class ConsumerContext {
 
     public ConsumerContext(DBMapper dbMapper, String brokerUrl, String topic, String sid, String userName, String password,
                            String initialCheckpoint, ConsumerContext.ConsumerSubscribeMode subscribeMode, Properties properties) {
-        this(dbMapper, brokerUrl, topic, sid, userName, password, initialCheckpoint, subscribeMode, new Properties(), false);
+        this(dbMapper, brokerUrl, topic, sid, userName, password, initialCheckpoint, subscribeMode, properties, false);
     }
 
     public ConsumerContext(DBMapper dbMapper, String brokerUrl, String topic, String sid, String userName, String password,
