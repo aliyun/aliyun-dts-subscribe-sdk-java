@@ -6,6 +6,7 @@ import com.aliyun.dts.subscribe.clients.record.DefaultUserRecord;
 import com.aliyun.dts.subscribe.clients.common.WorkThread;
 import com.aliyun.dts.subscribe.clients.formats.avro.Record;
 import com.aliyun.dts.subscribe.clients.recordfetcher.OffsetCommitCallBack;
+import com.taobao.drc.togo.client.consumer.SchemafulConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.metrics.Metrics;
@@ -29,7 +30,7 @@ public class UserRecordGenerator implements Runnable, Closeable {
     private static final Logger log = LoggerFactory.getLogger(UserRecordGenerator.class);
 
     protected ConsumerContext consumerContext;
-    protected final LinkedBlockingQueue<ConsumerRecord> toProcessRecord;
+    protected final LinkedBlockingQueue<SchemafulConsumerRecord> toProcessRecord;
     protected final AvroDeserializer fastDeserializer;
 
     protected final LinkedBlockingQueue<DefaultUserRecord> processedRecord;
@@ -43,7 +44,8 @@ public class UserRecordGenerator implements Runnable, Closeable {
     protected final Sensor recordStoreOutCountSensor;
     protected final Sensor recordStoreOutByteSensor;
 
-    public UserRecordGenerator(ConsumerContext consumerContext, LinkedBlockingQueue<ConsumerRecord> toProcessRecord, LinkedBlockingQueue<DefaultUserRecord> processedRecord,
+    public UserRecordGenerator(ConsumerContext consumerContext, LinkedBlockingQueue<SchemafulConsumerRecord> toProcessRecord,
+                               LinkedBlockingQueue<DefaultUserRecord> processedRecord,
                                OffsetCommitCallBack offsetCommitCallBack) {
         this.consumerContext = consumerContext;
         this.toProcessRecord = toProcessRecord;
@@ -75,7 +77,7 @@ public class UserRecordGenerator implements Runnable, Closeable {
     @Override
     public void run() {
         while (!consumerContext.isExited()) {
-            ConsumerRecord<byte[], byte[]> toProcess = null;
+            SchemafulConsumerRecord toProcess = null;
             Record record = null;
             int fetchFailedCount = 0;
             try {
@@ -89,16 +91,16 @@ public class UserRecordGenerator implements Runnable, Closeable {
                 if (consumerContext.isExited()) {
                     return;
                 }
-                final ConsumerRecord<byte[], byte[]> consumerRecord = toProcess;
+                final SchemafulConsumerRecord consumerRecord = toProcess;
                 consumerRecord.timestamp();
-                record = fastDeserializer.deserialize(consumerRecord.value());
+                record = fastDeserializer.deserialize(consumerRecord.data());
                 log.debug("UserRecordGenerator: meet [{}] record type", record.getOperation());
 
                 DefaultUserRecord defaultUserRecord = new DefaultUserRecord(new TopicPartition(consumerRecord.topic(), consumerRecord.partition()), consumerRecord.offset(),
                         record,
                         (tp, commitRecord, offset, metadata) -> {
                             recordStoreOutCountSensor.record(1);
-                            recordStoreOutByteSensor.record(consumerRecord.value().length);
+                            recordStoreOutByteSensor.record(consumerRecord.data().length);
                             commitCheckpoint = new Checkpoint(tp, commitRecord.getSourceTimestamp(), offset, metadata);
                             commit();
                         });

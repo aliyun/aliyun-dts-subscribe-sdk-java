@@ -3,6 +3,7 @@ package com.aliyun.dts.subscribe.clients;
 import com.aliyun.dms.subscribe.clients.DBMapper;
 import com.aliyun.dts.subscribe.clients.common.Checkpoint;
 import com.aliyun.dts.subscribe.clients.common.Util;
+import com.aliyun.dts.subscribe.clients.filter.DataFilter;
 import com.aliyun.dts.subscribe.clients.metastore.MetaStore;
 import com.aliyun.dts.subscribe.clients.metrics.DTSMetrics;
 import org.apache.kafka.common.TopicPartition;
@@ -42,6 +43,8 @@ public class ConsumerContext {
     private boolean useLocalCheckpointStore = true;
 
     private boolean isCheckpointNotExistThrowException;
+
+    private DataFilter dataFilter;
 
     public ConsumerContext(String brokerUrl, String topic, String sid, String userName, String password,
                            String initialCheckpoint, ConsumerContext.ConsumerSubscribeMode subscribeMode) {
@@ -212,6 +215,14 @@ public class ConsumerContext {
 
     public boolean isCheckpointNotExistThrowException() {
         return isCheckpointNotExistThrowException;
+    }
+
+    public DataFilter getDataFilter() {
+        return dataFilter;
+    }
+
+    public void setDataFilter(DataFilter dataFilter) {
+        this.dataFilter = dataFilter;
     }
 
     public enum ConsumerSubscribeMode {

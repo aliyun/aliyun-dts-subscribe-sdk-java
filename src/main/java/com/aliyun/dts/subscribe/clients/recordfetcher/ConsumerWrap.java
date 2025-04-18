@@ -2,12 +2,16 @@ package com.aliyun.dts.subscribe.clients.recordfetcher;
 
 import com.aliyun.dts.subscribe.clients.ConsumerContext;
 import com.aliyun.dts.subscribe.clients.common.Checkpoint;
+import com.aliyun.dts.subscribe.clients.filter.utils.FetchRuleUtil;
+import com.taobao.drc.togo.client.consumer.FetchRule;
+import com.taobao.drc.togo.client.consumer.SchemafulConsumerRecords;
+import com.taobao.drc.togo.client.consumer.TogoConsumer;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.OffsetAndTimestamp;
 import org.apache.kafka.common.TopicPartition;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,36 +37,51 @@ public abstract class ConsumerWrap implements Closeable {
     // this can delay offset commit until the record is really consumed by business logic which can strongly defend the data loss.
     public abstract void subscribeTopic(TopicPartition topicPartition, Supplier<Checkpoint> streamCheckpoint, boolean isCheckpointNotExistThrowException);
 
+    public abstract SchemafulConsumerRecords poll();
 
-    public abstract ConsumerRecords<byte[], byte[]> poll();
-
-    public abstract KafkaConsumer getRawConsumer();
+    public abstract TogoConsumer getRawConsumer();
 
     public static class DefaultConsumerWrap extends ConsumerWrap {
         private AtomicBoolean firstStart = new AtomicBoolean(true);
-        private KafkaConsumer<byte[], byte[]> consumer;
+        private TogoConsumer consumer;
         private final long poolTimeOut;
 
         private final ConsumerContext consumerContext;
+
+        FetchRule fetchRule;
 
         public DefaultConsumerWrap(Properties properties, ConsumerContext consumerContext) {
             Properties consumerConfig = new Properties();
             mergeSourceKafkaProperties(properties, consumerConfig);
             checkConfig(consumerConfig);
-            consumer = new KafkaConsumer<byte[], byte[]>(consumerConfig);
+            consumer = new TogoConsumer(consumerConfig);
             poolTimeOut = Long.valueOf(properties.getProperty(POLL_TIME_OUT, "500"));
 
             this.consumerContext = consumerContext;
+
+            if (consumerContext.getDataFilter() != null) {
+                fetchRule = FetchRuleUtil.generateFetchRule(consumerContext.getDataFilter());
+                log.info("RecordFetcher: fetch rule is {}", fetchRule);
+            }
         }
 
         @Override
         public void setFetchOffsetByOffset(TopicPartition topicPartition, Checkpoint checkpoint) {
+            if (fetchRule != null) {
+                log.info("RecordFetcher: fetch rule is {}", fetchRule);
+                consumer.setFetchRule(topicPartition, fetchRule);
+            }
             consumer.seek(topicPartition, checkpoint.getOffset());
         }
 
         // recommended
         @Override
         public void setFetchOffsetByTimestamp(TopicPartition topicPartition, Checkpoint checkpoint, boolean isCheckpointNotExistThrowException) {
+            if (fetchRule != null) {
+                log.info("RecordFetcher: fetch rule is {}", fetchRule);
+                consumer.setFetchRule(topicPartition, fetchRule);
+            }
+
             long timeStamp = checkpoint.getTimeStamp();
             Map<TopicPartition, OffsetAndTimestamp> remoteOffset = consumer.offsetsForTimes(Collections.singletonMap(topicPartition, timeStamp));
             OffsetAndTimestamp toSet = remoteOffset.get(topicPartition);
@@ -119,12 +138,12 @@ public abstract class ConsumerWrap implements Closeable {
             });
         }
 
-        public ConsumerRecords<byte[], byte[]> poll() {
+        public SchemafulConsumerRecords poll() {
             return consumer.poll(poolTimeOut);
         }
 
         @Override
-        public KafkaConsumer getRawConsumer() {
+        public TogoConsumer getRawConsumer() {
             return consumer;
         }
 

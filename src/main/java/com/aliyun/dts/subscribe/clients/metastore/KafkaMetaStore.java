@@ -1,6 +1,7 @@
 package com.aliyun.dts.subscribe.clients.metastore;
 
 import com.aliyun.dts.subscribe.clients.common.Checkpoint;
+import com.taobao.drc.togo.client.consumer.TogoConsumer;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
@@ -18,13 +19,13 @@ import java.util.concurrent.Future;
 public class KafkaMetaStore implements MetaStore<Checkpoint> {
     private static final Logger log = LoggerFactory.getLogger(KafkaMetaStore.class);
 
-    private volatile KafkaConsumer kafkaConsumer;
+    private volatile TogoConsumer kafkaConsumer;
 
-    public KafkaMetaStore(KafkaConsumer kafkaConsumer) {
+    public KafkaMetaStore(TogoConsumer kafkaConsumer) {
         this.kafkaConsumer = kafkaConsumer;
     }
 
-    public void resetKafkaConsumer(KafkaConsumer newConsumer) {
+    public void resetKafkaConsumer(TogoConsumer newConsumer) {
         this.kafkaConsumer = newConsumer;
     }
 

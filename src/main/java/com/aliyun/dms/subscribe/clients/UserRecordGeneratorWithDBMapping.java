@@ -6,6 +6,7 @@ import com.aliyun.dts.subscribe.clients.formats.avro.Record;
 import com.aliyun.dts.subscribe.clients.record.DefaultUserRecord;
 import com.aliyun.dts.subscribe.clients.recordfetcher.OffsetCommitCallBack;
 import com.aliyun.dts.subscribe.clients.recordgenerator.UserRecordGenerator;
+import com.taobao.drc.togo.client.consumer.SchemafulConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.TopicPartition;
 import org.slf4j.Logger;
@@ -23,7 +24,7 @@ import static com.aliyun.dts.subscribe.clients.common.Util.sleepMS;
 public class UserRecordGeneratorWithDBMapping extends UserRecordGenerator {
     private static final Logger log = LoggerFactory.getLogger(UserRecordGeneratorWithDBMapping.class);
 
-    public UserRecordGeneratorWithDBMapping(ConsumerContext consumerContext, LinkedBlockingQueue<ConsumerRecord> toProcessRecord,
+    public UserRecordGeneratorWithDBMapping(ConsumerContext consumerContext, LinkedBlockingQueue<SchemafulConsumerRecord> toProcessRecord,
                                             LinkedBlockingQueue<DefaultUserRecord> processedRecord,
                                             OffsetCommitCallBack offsetCommitCallBack) {
         super(consumerContext, toProcessRecord, processedRecord, offsetCommitCallBack);
@@ -32,7 +33,7 @@ public class UserRecordGeneratorWithDBMapping extends UserRecordGenerator {
     @Override
     public void run() {
         while (!consumerContext.isExited()) {
-            ConsumerRecord<byte[], byte[]> toProcess = null;
+            SchemafulConsumerRecord toProcess = null;
             Record record = null;
             int fetchFailedCount = 0;
             try {
@@ -46,9 +47,9 @@ public class UserRecordGeneratorWithDBMapping extends UserRecordGenerator {
                 if (consumerContext.isExited()) {
                     return;
                 }
-                final ConsumerRecord<byte[], byte[]> consumerRecord = toProcess;
+                final SchemafulConsumerRecord consumerRecord = toProcess;
                 consumerRecord.timestamp();
-                record = fastDeserializer.deserialize(consumerRecord.value());
+                record = fastDeserializer.deserialize(consumerRecord.data());
                 log.debug("UserRecordGenerator: meet [{}] record type", record.getOperation());
 
                 if (consumerContext.getDbMapper() != null && consumerContext.getDbMapper().isMapping()) {
@@ -58,7 +59,7 @@ public class UserRecordGeneratorWithDBMapping extends UserRecordGenerator {
                         record,
                         (tp, commitRecord, offset, metadata) -> {
                             recordStoreOutCountSensor.record(1);
-                            recordStoreOutByteSensor.record(consumerRecord.value().length);
+                            recordStoreOutByteSensor.record(consumerRecord.data().length);
                             commitCheckpoint = new Checkpoint(tp, commitRecord.getSourceTimestamp(), offset, metadata);
                             commit();
                         });
