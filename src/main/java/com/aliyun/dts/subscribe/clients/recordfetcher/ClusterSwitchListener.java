@@ -1,6 +1,7 @@
 package com.aliyun.dts.subscribe.clients.recordfetcher;
 
-import org.apache.kafka.clients.consumer.ConsumerInterceptor;
+import com.taobao.drc.togo.client.consumer.SchemafulConsumerInterceptor;
+import com.taobao.drc.togo.client.consumer.SchemafulConsumerRecords;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.common.ClusterResource;
 import org.apache.kafka.common.ClusterResourceListener;
@@ -18,14 +19,14 @@ import java.util.Map;
  *  If user following this guid, less duplicated data will be pushed.
  *  Otherwise
  */
-public class ClusterSwitchListener implements ClusterResourceListener, ConsumerInterceptor {
+public class ClusterSwitchListener implements ClusterResourceListener, SchemafulConsumerInterceptor {
     private final static Logger logger = LoggerFactory.getLogger(ClusterSwitchListener.class);
     private ClusterResource originClusterResource = null;
 
-    public ConsumerRecords onConsume(ConsumerRecords records) {
+    @Override
+    public SchemafulConsumerRecords onConsume(SchemafulConsumerRecords records) {
         return records;
     }
-
 
     public void close() {
     }

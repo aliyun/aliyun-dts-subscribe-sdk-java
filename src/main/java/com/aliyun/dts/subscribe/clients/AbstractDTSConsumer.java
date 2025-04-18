@@ -10,6 +10,7 @@ import com.aliyun.dts.subscribe.clients.record.DefaultUserRecord;
 import com.aliyun.dts.subscribe.clients.recordfetcher.KafkaRecordFetcher;
 import com.aliyun.dts.subscribe.clients.recordgenerator.UserRecordGenerator;
 import com.aliyun.dts.subscribe.clients.recordprocessor.EtlRecordProcessor;
+import com.taobao.drc.togo.client.consumer.SchemafulConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.log4j.PropertyConfigurator;
 import org.slf4j.Logger;
@@ -32,7 +33,7 @@ public abstract class AbstractDTSConsumer implements DTSConsumer {
 
     protected Map<String, RecordListener> recordListeners;
 
-    protected final LinkedBlockingQueue<ConsumerRecord> toProcessRecords;
+    protected final LinkedBlockingQueue<SchemafulConsumerRecord> toProcessRecords;
     protected final LinkedBlockingQueue<DefaultUserRecord> defaultUserRecords;
 
     protected volatile boolean started = false;;

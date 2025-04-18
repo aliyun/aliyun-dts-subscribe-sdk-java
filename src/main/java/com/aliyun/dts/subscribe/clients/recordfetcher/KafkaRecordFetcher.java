@@ -6,9 +6,12 @@ import com.aliyun.dts.subscribe.clients.exception.TimestampSeekException;
 import com.aliyun.dts.subscribe.clients.metastore.KafkaMetaStore;
 import com.aliyun.dts.subscribe.clients.metastore.LocalFileMetaStore;
 import com.aliyun.dts.subscribe.clients.metastore.MetaStoreCenter;
+import com.taobao.drc.togo.client.consumer.SchemafulConsumerRecord;
+import com.taobao.drc.togo.client.consumer.SchemafulConsumerRecords;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.OffsetOutOfRangeException;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.metrics.Metrics;
 import org.apache.kafka.common.metrics.Sensor;
@@ -20,6 +23,9 @@ import org.slf4j.LoggerFactory;
 import java.io.Closeable;
 import java.io.IOException;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -35,7 +41,7 @@ public class KafkaRecordFetcher implements Runnable, Closeable {
     private static final String USER_STORE_NAME = "userCheckpointStore";
 
     private ConsumerContext consumerContext;
-    private LinkedBlockingQueue<ConsumerRecord> toProcessRecord;
+    private LinkedBlockingQueue<SchemafulConsumerRecord> toProcessRecord;
 
     //private volatile boolean existed;
     private final int tryTime;
@@ -58,7 +64,7 @@ public class KafkaRecordFetcher implements Runnable, Closeable {
     private final Sensor recordStoreInCountSensor;
     private final Sensor recordStoreInByteSensor;
 
-    public KafkaRecordFetcher(ConsumerContext consumerContext, LinkedBlockingQueue<ConsumerRecord> toProcessRecord) {
+    public KafkaRecordFetcher(ConsumerContext consumerContext, LinkedBlockingQueue<SchemafulConsumerRecord> toProcessRecord) {
         this.consumerContext = consumerContext;
         this.toProcessRecord = toProcessRecord;
 
@@ -106,10 +112,11 @@ public class KafkaRecordFetcher implements Runnable, Closeable {
                 while (!consumerContext.isExited()) {
                     // kafka consumer is not threadsafe, so if you want commit checkpoint to kafka, commit it in same thread
                     mayCommitCheckpoint();
-                    ConsumerRecords<byte[], byte[]> records = kafkaConsumerWrap.poll();
-                    for (ConsumerRecord<byte[], byte[]> record : records) {
+                    SchemafulConsumerRecords records = kafkaConsumerWrap.poll();
+
+                    for (SchemafulConsumerRecord record : records) {
                         int offerTryCount = 0;
-                        if (record.value() == null || record.value().length <= 2) {
+                        if (record.data() == null || record.data().length <= 2) {
                             // dStore may generate special mock record to push up consumer offset for next fetchRequest if all data is filtered
                             continue;
                         }
@@ -135,10 +142,10 @@ public class KafkaRecordFetcher implements Runnable, Closeable {
         }
     }
 
-    private boolean offerRecord(int timeOut, TimeUnit timeUnit, ConsumerRecord<byte[],byte[]> record) {
+    private boolean offerRecord(int timeOut, TimeUnit timeUnit, SchemafulConsumerRecord record) {
         try {
             recordStoreInCountSensor.record(1);
-            recordStoreInByteSensor.record(record.value().length);
+            recordStoreInByteSensor.record(record.data().length);
             return toProcessRecord.offer(record, timeOut, timeUnit);
         } catch (Exception e) {
             log.error("UserRecordGenerator: offer record failed, record[" + record + "], cause " + e.getMessage(), e);

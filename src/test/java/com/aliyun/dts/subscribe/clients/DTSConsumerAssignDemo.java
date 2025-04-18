@@ -1,6 +1,8 @@
 package com.aliyun.dts.subscribe.clients;
 
 import com.aliyun.dts.subscribe.clients.common.RecordListener;
+import com.aliyun.dts.subscribe.clients.filter.DataFilter;
+import com.aliyun.dts.subscribe.clients.filter.DataFilterImpl;
 import com.aliyun.dts.subscribe.clients.record.DefaultUserRecord;
 import com.aliyun.dts.subscribe.clients.record.OperationType;
 import com.aliyun.dts.subscribe.clients.recordprocessor.DbType;
@@ -16,6 +18,8 @@ public class DTSConsumerAssignDemo {
 
     private final DTSConsumer dtsConsumer;
 
+    private ConsumerContext consumerContext;
+
     public DTSConsumerAssignDemo(String brokerUrl, String topic, String sid, String userName, String password,
                                  String checkpoint, ConsumerContext.ConsumerSubscribeMode subscribeMode, boolean isForceUseInitCheckpoint) {
         this.dtsConsumer = initDTSClient(brokerUrl, topic, sid, userName, password, checkpoint, subscribeMode, isForceUseInitCheckpoint);
@@ -23,7 +27,7 @@ public class DTSConsumerAssignDemo {
 
     private DTSConsumer initDTSClient(String brokerUrl, String topic, String sid, String userName, String password,
                                       String initCheckpoint, ConsumerContext.ConsumerSubscribeMode subscribeMode, boolean isForceUseInitCheckpoint) {
-        ConsumerContext consumerContext = new ConsumerContext(brokerUrl, topic, sid, userName, password, initCheckpoint, subscribeMode);
+        consumerContext = new ConsumerContext(brokerUrl, topic, sid, userName, password, initCheckpoint, subscribeMode);
 
         //if this parameter is set, force to use the initCheckpoint to initial
         consumerContext.setForceUseCheckpoint(isForceUseInitCheckpoint);
@@ -38,6 +42,10 @@ public class DTSConsumerAssignDemo {
         return dtsConsumer;
     }
 
+    private void setDataFilter(DataFilter dataFilterBase) {
+        consumerContext.setDataFilter(dataFilterBase);
+    }
+
     public static Map<String, RecordListener> buildRecordListener() {
         // user can impl their own listener
         RecordListener mysqlRecordPrintListener = new RecordListener() {
@@ -50,7 +58,8 @@ public class DTSConsumerAssignDemo {
                         || operationType.equals(OperationType.UPDATE)
                         || operationType.equals(OperationType.DELETE)
                         || operationType.equals(OperationType.DDL)
-                        || operationType.equals(OperationType.HEARTBEAT)) {
+                        //|| operationType.equals(OperationType.HEARTBEAT)
+                ) {
 
                     // consume record
                     RecordListener recordPrintListener = new DefaultRecordPrintListener(DbType.MySQL);
@@ -88,6 +97,11 @@ public class DTSConsumerAssignDemo {
         boolean isForceUseInitCheckpoint = true;
 
         DTSConsumerAssignDemo consumerDemo = new DTSConsumerAssignDemo(brokerUrl, topic, sid, userName, password, initCheckpoint, subscribeMode, isForceUseInitCheckpoint);
+
+        //set filter rule
+        DataFilter dataFilterBase = DataFilterImpl.create().addFilterTuple("*", "dts", "test1*", "*");
+        consumerDemo.setDataFilter(dataFilterBase);
+
         consumerDemo.start();
     }
 }
