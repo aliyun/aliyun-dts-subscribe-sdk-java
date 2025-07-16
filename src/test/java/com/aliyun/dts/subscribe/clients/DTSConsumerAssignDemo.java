@@ -3,6 +3,7 @@ package com.aliyun.dts.subscribe.clients;
 import com.aliyun.dts.subscribe.clients.common.RecordListener;
 import com.aliyun.dts.subscribe.clients.record.DefaultUserRecord;
 import com.aliyun.dts.subscribe.clients.record.OperationType;
+import com.aliyun.dts.subscribe.clients.record.UserRecord;
 import com.aliyun.dts.subscribe.clients.recordprocessor.DbType;
 import com.aliyun.dts.subscribe.clients.recordprocessor.DefaultRecordPrintListener;
 import org.slf4j.Logger;
@@ -42,7 +43,7 @@ public class DTSConsumerAssignDemo {
         // user can impl their own listener
         RecordListener mysqlRecordPrintListener = new RecordListener() {
             @Override
-            public void consume(DefaultUserRecord record) {
+            public void consume(UserRecord record) {
 
                 OperationType operationType = record.getOperationType();
 
@@ -72,16 +73,16 @@ public class DTSConsumerAssignDemo {
     }
 
     public static void main(String[] args) {
-        // kafka broker url
-        String brokerUrl = "your broker url";
+// kafka broker url
+        String brokerUrl = "dts-cn-hangzhou.aliyuncs.com:18001";
         // topic to consume, partition is 0
-        String topic = "your dts topic";
+        String topic = "cn_hangzhou_vpc_rm_bp148ecac4w99l3l1_dts_version2";
         // user password and sid for auth
-        String sid = "your sid";
-        String userName = "your user name";
-        String password = "your password";
+        String sid = "dtsozh109lm140726f";
+        String userName = "dts";
+        String password = "DTStest1234";
         // initial checkpoint for first seek(a timestamp to set, eg 1566180200 if you want (Mon Aug 19 10:03:21 CST 2019))
-        String initCheckpoint = "start timestamp";
+        String initCheckpoint = "1752656225";
         // when use subscribe mode, group config is required. kafka consumer group is enabled
         ConsumerContext.ConsumerSubscribeMode subscribeMode = ConsumerContext.ConsumerSubscribeMode.ASSIGN;
         // if force use config checkpoint when start. for checkpoint reset, only assign mode works

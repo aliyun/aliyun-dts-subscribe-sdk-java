@@ -4,6 +4,7 @@ import com.aliyun.dts.subscribe.clients.ConsumerContext;
 import com.aliyun.dts.subscribe.clients.common.Checkpoint;
 import com.aliyun.dts.subscribe.clients.formats.avro.Record;
 import com.aliyun.dts.subscribe.clients.record.DefaultUserRecord;
+import com.aliyun.dts.subscribe.clients.record.UserRecord;
 import com.aliyun.dts.subscribe.clients.recordfetcher.OffsetCommitCallBack;
 import com.aliyun.dts.subscribe.clients.recordgenerator.UserRecordGenerator;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -24,7 +25,7 @@ public class UserRecordGeneratorWithDBMapping extends UserRecordGenerator {
     private static final Logger log = LoggerFactory.getLogger(UserRecordGeneratorWithDBMapping.class);
 
     public UserRecordGeneratorWithDBMapping(ConsumerContext consumerContext, LinkedBlockingQueue<ConsumerRecord> toProcessRecord,
-                                            LinkedBlockingQueue<DefaultUserRecord> processedRecord,
+                                            LinkedBlockingQueue<UserRecord> processedRecord,
                                             OffsetCommitCallBack offsetCommitCallBack) {
         super(consumerContext, toProcessRecord, processedRecord, offsetCommitCallBack);
     }
@@ -56,10 +57,10 @@ public class UserRecordGeneratorWithDBMapping extends UserRecordGenerator {
                 }
                 DefaultUserRecord defaultUserRecord = new DefaultUserRecord(new TopicPartition(consumerRecord.topic(), consumerRecord.partition()), consumerRecord.offset(),
                         record,
-                        (tp, commitRecord, offset, metadata) -> {
+                        (tp, sourceTimestamp, offset, metadata) -> {
                             recordStoreOutCountSensor.record(1);
                             recordStoreOutByteSensor.record(consumerRecord.value().length);
-                            commitCheckpoint = new Checkpoint(tp, commitRecord.getSourceTimestamp(), offset, metadata);
+                            commitCheckpoint = new Checkpoint(tp, sourceTimestamp, offset, metadata);
                             commit();
                         });
 

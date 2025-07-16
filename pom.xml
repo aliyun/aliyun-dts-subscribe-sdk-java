@@ -10,7 +10,7 @@
     <packaging>jar</packaging>
     <groupId>com.aliyun.dts</groupId>
     <artifactId>dts-new-subscribe-sdk</artifactId>
-    <version>2.1.4</version>
+    <version>2.1.5</version>
 
     <!-- licenses, licenses, scm tags are needed by public maven deploying-->
     <licenses>

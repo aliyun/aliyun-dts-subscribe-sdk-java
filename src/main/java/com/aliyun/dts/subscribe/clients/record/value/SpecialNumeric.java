@@ -1,7 +1,7 @@
 package com.aliyun.dts.subscribe.clients.record.value;
 
 
-class SpecialNumeric implements Value<SpecialNumeric.SpecialNumericType> {
+public class SpecialNumeric implements Value<SpecialNumeric.SpecialNumericType> {
 
     private static final String NAN = "NaN";
     private static final String INFINITY = "Infinity";
