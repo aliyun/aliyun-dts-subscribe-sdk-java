@@ -7,7 +7,21 @@ public enum OperationType {
     DDL,
     BEGIN,
     COMMIT,
+    ROLLBACK,
+    ABORT,
     HEARTBEAT,
     CHECKPOINT,
-    UNKNOWN;
+    COMMAND,
+    FILL,
+    FINISH,
+    CONTROL,
+    RDB,
+    PING,
+    NOOP,
+    INIT,
+    EOF,
+    // This type is added for manually generated record to execute for special case when replicate, txn table eg
+    MANUAL_GENERATED,
+    UNKNOWN,
+    SWITCH
 }

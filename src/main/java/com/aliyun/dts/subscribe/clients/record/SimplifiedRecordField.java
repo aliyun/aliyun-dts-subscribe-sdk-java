@@ -1,5 +1,6 @@
 package com.aliyun.dts.subscribe.clients.record;
 
+import com.aliyun.dts.subscribe.clients.record.impl.RawDataType;
 import com.aliyun.dts.subscribe.clients.record.value.Value;
 
 import java.util.Collections;
@@ -7,16 +8,22 @@ import java.util.Set;
 
 public class SimplifiedRecordField implements RecordField {
 
-    private final String fieldName;
+    private String fieldName;
     private final int rawDataTypeNum;
     private boolean isPrimaryKey;
     private boolean isUniqueKey;
 
     private int fieldPosition;
 
+    private RawDataType rawDataType;
+
     public SimplifiedRecordField(String fieldName, int rawDataTypeNum) {
         this.fieldName = fieldName;
         this.rawDataTypeNum = rawDataTypeNum;
+    }
+
+    public void setFieldName(String fieldName) {
+        this.fieldName = fieldName;
     }
 
     public String getFieldName() {
@@ -25,6 +32,11 @@ public class SimplifiedRecordField implements RecordField {
 
     public Set<String> getAliases() {
         return Collections.emptySet();
+    }
+
+    @Override
+    public RawDataType getRawDataType() {
+        return rawDataType;
     }
 
     public int getRawDataTypeNum() {
