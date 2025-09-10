@@ -50,7 +50,7 @@ public abstract class ConsumerWrap implements Closeable {
             mergeSourceKafkaProperties(properties, consumerConfig);
             checkConfig(consumerConfig);
             consumer = new KafkaConsumer<byte[], byte[]>(consumerConfig);
-            poolTimeOut = Long.valueOf(properties.getProperty(POLL_TIME_OUT, "500"));
+            poolTimeOut = Long.valueOf(properties.getProperty(POLL_TIME_OUT, "10000"));
 
             this.consumerContext = consumerContext;
         }
