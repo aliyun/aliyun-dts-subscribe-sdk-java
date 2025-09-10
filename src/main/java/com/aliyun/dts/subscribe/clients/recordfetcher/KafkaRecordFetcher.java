@@ -58,6 +58,8 @@ public class KafkaRecordFetcher implements Runnable, Closeable {
     private final Sensor recordStoreInCountSensor;
     private final Sensor recordStoreInByteSensor;
 
+    private int emptyFetchCount;
+
     public KafkaRecordFetcher(ConsumerContext consumerContext, LinkedBlockingQueue<ConsumerRecord> toProcessRecord) {
         this.consumerContext = consumerContext;
         this.toProcessRecord = toProcessRecord;
@@ -85,6 +87,8 @@ public class KafkaRecordFetcher implements Runnable, Closeable {
 
         log.info("RecordGenerator: try time [" + tryTime + "], try backTimeMS [" + tryBackTimeMS + "], isCheckpointNotExistThrowException [" + isCheckpointNotExistThrowException +  "]");
 
+        this.emptyFetchCount = 0;
+
         Metrics metrics = consumerContext.getDtsMetrics().getCoreMetrics();
         this.recordStoreInCountSensor = metrics.sensor("record-store-in-row");
         this.recordStoreInCountSensor.add(metrics.metricName("inCounts", "recordstore"), new Total());
@@ -106,6 +110,8 @@ public class KafkaRecordFetcher implements Runnable, Closeable {
                 while (!consumerContext.isExited()) {
                     // kafka consumer is not threadsafe, so if you want commit checkpoint to kafka, commit it in same thread
                     mayCommitCheckpoint();
+
+                    ConsumerRecord latestConsumerRecord = null;
                     ConsumerRecords<byte[], byte[]> records = kafkaConsumerWrap.poll();
                     for (ConsumerRecord<byte[], byte[]> record : records) {
                         int offerTryCount = 0;
@@ -118,7 +124,11 @@ public class KafkaRecordFetcher implements Runnable, Closeable {
                                 log.info("KafkaRecordFetcher: offer kafka record has failed for a period (10s) [ " + record + "]");
                             }
                         }
+
+                        latestConsumerRecord = record;
                     }
+
+                    checkEmptyFetchCount(latestConsumerRecord);
                 }
             } catch (Throwable e) {
                 if (isErrorRecoverable(e) && haveTryTime++ < tryTime) {
@@ -134,6 +144,25 @@ public class KafkaRecordFetcher implements Runnable, Closeable {
             }
         }
     }
+
+    /**
+     * The purpose of this function is revealing retry status of fetch DStore records, if DStore do not produce new record
+     * DStore source will fall into the retry status and throws an exception after 5 retires.
+     * @param latestConsumerRecord
+     */
+    private void checkEmptyFetchCount(ConsumerRecord latestConsumerRecord) {
+        if (latestConsumerRecord != null) {
+            this.emptyFetchCount = 0;
+            return;
+        }
+        this.emptyFetchCount++;
+        if (this.emptyFetchCount < 64) {
+            return;
+        }
+        throw new RuntimeException("kafka-record-fetcher" +
+                "Fetch records " + this.emptyFetchCount + " times but return empty.", new Exception("Fetch records but return empty."));
+    }
+
 
     private boolean offerRecord(int timeOut, TimeUnit timeUnit, ConsumerRecord<byte[],byte[]> record) {
         try {
