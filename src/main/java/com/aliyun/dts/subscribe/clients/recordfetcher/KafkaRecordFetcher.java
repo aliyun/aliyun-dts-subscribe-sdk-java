@@ -128,7 +128,9 @@ public class KafkaRecordFetcher implements Runnable, Closeable {
                         latestConsumerRecord = record;
                     }
 
-                    checkEmptyFetchCount(latestConsumerRecord);
+                    if (consumerContext.hasValidTopicPartitions()) {
+                        checkEmptyFetchCount(latestConsumerRecord);
+                    }
                 }
             } catch (Throwable e) {
                 if (isErrorRecoverable(e) && haveTryTime++ < tryTime) {
