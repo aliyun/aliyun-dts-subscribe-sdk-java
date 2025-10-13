@@ -11,5 +11,5 @@ src/test/java/com/aliyun/dts/subscribe/clients/YanmenDistributedDTSConsumerDemo.
 src/test/java/com/aliyun/dts/subscribe/clients/MySQLUserMetaStore.java
 dts-new-subscribe.log
 .flattened-pom.xml
-
 /client/
+logs

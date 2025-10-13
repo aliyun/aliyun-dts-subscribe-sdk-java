@@ -30,6 +30,8 @@ import static com.aliyun.dts.subscribe.clients.common.Util.swallowErrorClose;
 
 public class KafkaRecordFetcher implements Runnable, Closeable {
     private static final Logger log = LoggerFactory.getLogger(KafkaRecordFetcher.class);
+    private static final Logger core_log = LoggerFactory.getLogger("log.metrics");
+
     private static final String LOCAL_FILE_STORE_NAME = "localCheckpointStore";
     private static final String KAFKA_STORE_NAME = "kafkaCheckpointStore";
     private static final String USER_STORE_NAME = "userCheckpointStore";
@@ -192,6 +194,7 @@ public class KafkaRecordFetcher implements Runnable, Closeable {
 
         if (useCheckpointConfig.compareAndSet(true, false)) {
             log.info("RecordGenerator: force use initial checkpoint [{}] to start", checkpoint);
+            core_log.info("RecordGenerator: force use initial checkpoint [{}] to start", checkpoint);
             checkpoint = initialCheckpoint;
         } else {
             checkpoint = getCheckpoint();

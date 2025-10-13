@@ -214,6 +214,21 @@ public class ConsumerContext {
         return isCheckpointNotExistThrowException;
     }
 
+    @Override
+    public String toString() {
+        return "ConsumerContext{" +
+                "brokerUrl='" + brokerUrl + '\'' +
+                ", topic='" + topic + '\'' +
+                ", sid='" + sid + '\'' +
+                ", user='" + user + '\'' +
+                ", subscribeMode=" + subscribeMode +
+                ", topicPartitions=" + topicPartitions +
+                ", checkpointCommitInterval=" + checkpointCommitInterval +
+                ", useLocalCheckpointStore=" + useLocalCheckpointStore +
+                ", isCheckpointNotExistThrowException=" + isCheckpointNotExistThrowException +
+                '}';
+    }
+
     public enum ConsumerSubscribeMode {
         ASSIGN,
         SUBSCRIBE,

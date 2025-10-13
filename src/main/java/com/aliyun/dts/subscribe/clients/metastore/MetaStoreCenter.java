@@ -10,6 +10,8 @@ import java.util.Map;
 
 public class MetaStoreCenter {
     private static final Logger log = LoggerFactory.getLogger(MetaStoreCenter.class);
+    private static final Logger core_log = LoggerFactory.getLogger("log.metrics");
+
     private final Map<String, MetaStore<Checkpoint>> registeredStore = new HashMap<>();
     public MetaStoreCenter() {
 
@@ -29,8 +31,11 @@ public class MetaStoreCenter {
     public Checkpoint seek(String storeName, TopicPartition tp, String group) {
         MetaStore<Checkpoint> metaStore = registeredStore.get(storeName);
         if (null != metaStore) {
-            return metaStore.deserializeFrom(tp, group);
+            Checkpoint checkpoint = metaStore.deserializeFrom(tp, group);
+            core_log.info("MetaStoreCenter: seek storeName {}, topicPartition {}, group {}, checkpoint {}", storeName, tp, group, checkpoint);
+            return checkpoint;
         } else {
+            core_log.info("MetaStoreCenter: seek storeName {}, topicPartition {}, group {}, checkpoint {}", storeName, tp, group, null);
             return null;
         }
     }

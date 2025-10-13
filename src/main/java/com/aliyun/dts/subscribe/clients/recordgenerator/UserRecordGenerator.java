@@ -28,6 +28,10 @@ import static com.aliyun.dts.subscribe.clients.common.Util.sleepMS;
 public class UserRecordGenerator implements Runnable, Closeable {
     private static final Logger log = LoggerFactory.getLogger(UserRecordGenerator.class);
 
+    static {
+        System.setProperty("kafka.metrics.reporters", "org.apache.kafka.common.metrics.JmxReporter");
+    }
+
     protected ConsumerContext consumerContext;
     protected final LinkedBlockingQueue<ConsumerRecord> toProcessRecord;
     protected final AvroDeserializer fastDeserializer;

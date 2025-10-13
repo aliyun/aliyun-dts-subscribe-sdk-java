@@ -27,6 +27,7 @@ import static com.aliyun.dts.subscribe.clients.common.Util.swallowErrorClose;
 
 public abstract class AbstractDTSConsumer implements DTSConsumer {
     private static final Logger log = LoggerFactory.getLogger(AbstractDTSConsumer.class);
+    private static final Logger core_log = LoggerFactory.getLogger("log.metrics");
 
     protected ConsumerContext consumerContext;
 
@@ -39,7 +40,7 @@ public abstract class AbstractDTSConsumer implements DTSConsumer {
 
     public AbstractDTSConsumer(ConsumerContext consumerContext) {
         this.consumerContext = consumerContext;
-
+        core_log.info("consumerContext: " + consumerContext);
         this.toProcessRecords = new LinkedBlockingQueue<>(512);
         this.defaultUserRecords = new LinkedBlockingQueue<>(512);
     }
