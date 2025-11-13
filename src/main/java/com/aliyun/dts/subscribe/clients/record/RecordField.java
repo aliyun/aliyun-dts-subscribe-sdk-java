@@ -1,5 +1,6 @@
 package com.aliyun.dts.subscribe.clients.record;
 
+import com.aliyun.dts.subscribe.clients.record.impl.RawDataType;
 import com.aliyun.dts.subscribe.clients.record.value.Value;
 
 public interface RecordField {
@@ -7,6 +8,11 @@ public interface RecordField {
      * @return Get the field name, which is case sensitive.
      */
     String getFieldName();
+
+    /**
+     * Get raw data type of this field.
+     */
+    RawDataType getRawDataType();
 
     /**
      * @return Get raw data type of this field.

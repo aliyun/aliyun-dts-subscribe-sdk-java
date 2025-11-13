@@ -6,7 +6,7 @@ import com.aliyun.dts.subscribe.clients.check.DefaultCheckManager;
 import com.aliyun.dts.subscribe.clients.check.SubscribeNetworkChecker;
 import com.aliyun.dts.subscribe.clients.common.RecordListener;
 import com.aliyun.dts.subscribe.clients.common.WorkThread;
-import com.aliyun.dts.subscribe.clients.record.DefaultUserRecord;
+import com.aliyun.dts.subscribe.clients.record.UserRecord;
 import com.aliyun.dts.subscribe.clients.recordfetcher.KafkaRecordFetcher;
 import com.aliyun.dts.subscribe.clients.recordgenerator.UserRecordGenerator;
 import com.aliyun.dts.subscribe.clients.recordprocessor.EtlRecordProcessor;
@@ -34,7 +34,7 @@ public abstract class AbstractDTSConsumer implements DTSConsumer {
     protected Map<String, RecordListener> recordListeners;
 
     protected final LinkedBlockingQueue<ConsumerRecord> toProcessRecords;
-    protected final LinkedBlockingQueue<DefaultUserRecord> defaultUserRecords;
+    protected final LinkedBlockingQueue<UserRecord> defaultUserRecords;
 
     protected volatile boolean started = false;;
 

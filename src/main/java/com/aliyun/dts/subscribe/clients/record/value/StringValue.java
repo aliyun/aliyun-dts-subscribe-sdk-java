@@ -7,12 +7,18 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
+import java.util.HashMap;
+import java.util.Map;
 
 public class StringValue implements Value<ByteBuffer> {
 
     public static final String DEFAULT_CHARSET = "UTF-8";
     private ByteBuffer data;
     private String charset;
+    private String rawString;
+    private transient String toStringCache;
+    private static ThreadLocal<Map<String, Charset>> charsetMap = new ThreadLocal<>();
 
     public StringValue(ByteBuffer data, String charset) {
         this.data = data;
@@ -20,9 +26,8 @@ public class StringValue implements Value<ByteBuffer> {
     }
 
     public StringValue(String data) {
-        this(ByteBuffer.wrap(
-                SwallowException.callAndThrowRuntimeException(() -> data.getBytes(DEFAULT_CHARSET))),
-                DEFAULT_CHARSET);
+        this.rawString = data;
+        this.charset = DEFAULT_CHARSET;
     }
 
     public String getCharset() {
@@ -42,24 +47,38 @@ public class StringValue implements Value<ByteBuffer> {
     @Override
     public String toString() {
 
+        if (rawString != null) {
+            return rawString;
+        }
+        if (data == null) {
+            return null;
+        }
+        if (null != toStringCache) {
+            return toStringCache;
+        }
         // just return hex string if missing charset
         if (StringUtils.isEmpty(charset)) {
-            return BytesUtil.byteBufferToHexString(data);
+            return BytesUtil.byteBufferToHexString(BytesUtil.newInitialByteBuffer(data));
         }
 
         // try encode data by specified charset
+        Map<String, Charset> localMap = charsetMap.get();
+        if (null == localMap) {
+            localMap = new HashMap<>();
+            charsetMap.set(localMap);
+        }
         try {
-            if (!StringUtils.isEmpty(charset)) {
-                return new String(data.array(), charset);
-            }
-            return new String(data.array());
-        } catch (UnsupportedEncodingException e1) {
+            Charset charsetObject = localMap.computeIfAbsent(charset, key -> Charset.forName(charset));
+            toStringCache = new String(data.array(), data.arrayOffset(), data.remaining(), charsetObject);
+        } catch (Exception e1) {
             try {
-                return new String(data.array(), JDKCharsetMapper.getJDKECharset(charset));
-            } catch (UnsupportedEncodingException e2) {
-                return charset + "_'" + BytesUtil.byteBufferToHexString(data) + "'";
+                Charset charsetObject = localMap.computeIfAbsent(charset, key -> Charset.forName(JDKCharsetMapper.getJDKECharset(charset)));
+                toStringCache = new String(data.array(), data.arrayOffset(), data.remaining(), charsetObject);
+            } catch (Exception e2) {
+                toStringCache = charset + "_'" + BytesUtil.byteBufferToHexString(data) + "'";
             }
         }
+        return toStringCache;
     }
 
     public String toString(String targetCharset) {

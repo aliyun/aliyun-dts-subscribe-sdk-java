@@ -1,8 +1,8 @@
 package com.aliyun.dts.subscribe.clients;
 
 import com.aliyun.dts.subscribe.clients.common.RecordListener;
-import com.aliyun.dts.subscribe.clients.record.DefaultUserRecord;
 import com.aliyun.dts.subscribe.clients.record.OperationType;
+import com.aliyun.dts.subscribe.clients.record.UserRecord;
 import com.aliyun.dts.subscribe.clients.recordprocessor.DbType;
 import com.aliyun.dts.subscribe.clients.recordprocessor.DefaultRecordPrintListener;
 import org.slf4j.Logger;
@@ -39,7 +39,7 @@ public class DTSConsumerSubscribeDemo {
         // user can impl their own listener
         RecordListener mysqlRecordPrintListener = new RecordListener() {
             @Override
-            public void consume(DefaultUserRecord record) {
+            public void consume(UserRecord record) {
 
                 OperationType operationType = record.getOperationType();
 

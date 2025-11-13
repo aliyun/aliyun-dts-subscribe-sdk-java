@@ -1,5 +1,7 @@
 package com.aliyun.dts.subscribe.clients.record;
 
+import java.util.Map;
+
 public interface UserRecord {
     /**
      * @return Get the record unique id.
@@ -30,4 +32,11 @@ public interface UserRecord {
      * @return Get the after row image of current record.
      */
     RowImage getAfterImage();
+
+    /**
+     * Get extended properties, that should not be record data, such as the tag info.
+     */
+    Map<String, String> getExtendedProperty();
+
+    void commit(String metadata);
 }

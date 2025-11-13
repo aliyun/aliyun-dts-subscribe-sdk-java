@@ -1,9 +1,9 @@
 package com.aliyun.dts.subscribe.clients.recordprocessor;
 
 import com.aliyun.dts.subscribe.clients.common.RecordListener;
-import com.aliyun.dts.subscribe.clients.record.DefaultUserRecord;
 import com.aliyun.dts.subscribe.clients.record.OperationType;
 import com.aliyun.dts.subscribe.clients.record.RecordSchema;
+import com.aliyun.dts.subscribe.clients.record.UserRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,11 +14,14 @@ public class DefaultRecordPrintListener implements RecordListener {
     }
 
     @Override
-    public void consume(DefaultUserRecord record) {
+    public void consume(UserRecord record) {
 
         OperationType operationType = record.getOperationType();
 
-        RecordSchema recordSchema = record.getSchema();
+        RecordSchema recordSchema = null;
+        if (!operationType.equals(OperationType.HEARTBEAT)) {
+            recordSchema = record.getSchema();
+        }
 
         StringBuilder stringBuilder = new StringBuilder();
 
@@ -29,7 +32,7 @@ public class DefaultRecordPrintListener implements RecordListener {
                 // record generate timestamp in source log
                 .append("RecordTimestamp [").append(record.getSourceTimestamp()).append("] \n")
                 // source info contains which source this record came from
-                .append("Source [").append(recordSchema.getDatabaseInfo()).append("]\n")
+                .append("Source [").append(recordSchema == null? "null" :recordSchema.getDatabaseInfo()).append("]\n")
                 // record type
                 .append("RecordType [").append(record.getOperationType()).append("]\n");
 

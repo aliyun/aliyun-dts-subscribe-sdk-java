@@ -3,7 +3,6 @@ package com.aliyun.dts.subscribe.clients.record.impl;
 import com.aliyun.dts.subscribe.clients.common.NullableOptional;
 import com.aliyun.dts.subscribe.clients.record.*;
 import com.aliyun.dts.subscribe.clients.record.value.Value;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -20,6 +19,11 @@ public class DefaultRowImage implements RowImage {
     public DefaultRowImage(RecordSchema recordSchema) {
         this.recordSchema = recordSchema;
         this.values = new Value[recordSchema.getFieldCount()];
+    }
+
+    public DefaultRowImage(RecordSchema recordSchema, int fieldCount) {
+        this.recordSchema = recordSchema;
+        this.values = new Value[fieldCount];
     }
 
     @Override

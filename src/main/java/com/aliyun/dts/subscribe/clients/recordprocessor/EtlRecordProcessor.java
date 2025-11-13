@@ -3,11 +3,7 @@ package com.aliyun.dts.subscribe.clients.recordprocessor;
 
 import com.aliyun.dts.subscribe.clients.ConsumerContext;
 import com.aliyun.dts.subscribe.clients.common.*;
-import com.aliyun.dts.subscribe.clients.record.DefaultUserRecord;
-import org.apache.kafka.common.metrics.Metrics;
-import org.apache.kafka.common.metrics.Sensor;
-import org.apache.kafka.common.metrics.stats.SimpleRate;
-import org.apache.kafka.common.metrics.stats.Total;
+import com.aliyun.dts.subscribe.clients.record.UserRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,12 +22,12 @@ import static com.aliyun.dts.subscribe.clients.common.Util.sleepMS;
 public class EtlRecordProcessor implements  Runnable, Closeable {
     private static final Logger log = LoggerFactory.getLogger(EtlRecordProcessor.class);
 
-    private final LinkedBlockingQueue<DefaultUserRecord> toProcessRecord;
+    private final LinkedBlockingQueue<UserRecord> toProcessRecord;
     private final Map<String, RecordListener> recordListeners;
 
     private ConsumerContext consumerContext;
 
-    public EtlRecordProcessor(ConsumerContext consumerContext, LinkedBlockingQueue<DefaultUserRecord> toProcessRecord,
+    public EtlRecordProcessor(ConsumerContext consumerContext, LinkedBlockingQueue<UserRecord> toProcessRecord,
                               Map<String, RecordListener> recordListeners) {
         this.consumerContext = consumerContext;
         this.toProcessRecord = toProcessRecord;
@@ -41,7 +37,7 @@ public class EtlRecordProcessor implements  Runnable, Closeable {
     @Override
     public void run() {
         while (!consumerContext.isExited()) {
-            DefaultUserRecord toProcess = null;
+            UserRecord toProcess = null;
             int fetchFailedCount = 0;
             try {
                 while (null == (toProcess = toProcessRecord.peek()) && !consumerContext.isExited()) {
@@ -55,7 +51,7 @@ public class EtlRecordProcessor implements  Runnable, Closeable {
                     return;
                 }
                 fetchFailedCount = 0;
-                final DefaultUserRecord consumerRecord = toProcess;
+                final UserRecord consumerRecord = toProcess;
 
                 for (RecordListener recordListener : recordListeners.values()) {
                     recordListener.consume(consumerRecord);

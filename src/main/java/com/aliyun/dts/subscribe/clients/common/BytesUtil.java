@@ -365,4 +365,19 @@ public class BytesUtil {
     public static byte[] hexStringToBytes(String hexString) {
         return hexStringToByteBuffer(hexString).array();
     }
+
+    public static ByteBuffer newInitialByteBuffer(ByteBuffer binaryData) {
+        byte[] newBytes = new byte[binaryData.capacity()];
+
+        if (binaryData.hasArray()) {
+            System.arraycopy(binaryData.array(), binaryData.arrayOffset(), newBytes, 0, binaryData.capacity());
+            return ByteBuffer.wrap(newBytes, binaryData.position(), binaryData.remaining());
+        } else {
+            int pos = binaryData.position();
+            int len = binaryData.limit() - pos;
+            byte[] b = new byte[len];
+            binaryData.duplicate().get(b, 0, len);
+            return ByteBuffer.wrap(b);
+        }
+    }
 }

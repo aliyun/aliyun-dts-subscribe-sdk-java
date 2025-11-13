@@ -4,6 +4,7 @@ import com.aliyun.dts.subscribe.clients.common.UserCommitCallBack;
 import com.aliyun.dts.subscribe.clients.formats.avro.Record;
 import org.apache.kafka.common.TopicPartition;
 
+import java.util.Map;
 import java.util.function.Function;
 
 public class DefaultUserRecord implements UserRecord {
@@ -42,7 +43,7 @@ public class DefaultUserRecord implements UserRecord {
     }
 
     public void commit(String metadata) {
-        userCommitCallBack.commit(topicPartition, avroRecord, offset, metadata);
+        userCommitCallBack.commit(topicPartition, getSourceTimestamp(), offset, metadata);
     }
 
     @Override
@@ -84,5 +85,10 @@ public class DefaultUserRecord implements UserRecord {
             afterImage = callAvroRecordMethod(record -> AvroRecordParser.getRowImage(getSchema(), record, false));
         }
         return afterImage;
+    }
+
+    @Override
+    public Map<String, String> getExtendedProperty() {
+        return avroRecord.getTags();
     }
 }

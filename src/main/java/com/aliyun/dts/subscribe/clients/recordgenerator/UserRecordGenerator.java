@@ -2,9 +2,11 @@ package com.aliyun.dts.subscribe.clients.recordgenerator;
 
 import com.aliyun.dts.subscribe.clients.ConsumerContext;
 import com.aliyun.dts.subscribe.clients.common.Checkpoint;
-import com.aliyun.dts.subscribe.clients.record.DefaultUserRecord;
+import com.aliyun.dts.subscribe.clients.common.UserCommitCallBack;
 import com.aliyun.dts.subscribe.clients.common.WorkThread;
-import com.aliyun.dts.subscribe.clients.formats.avro.Record;
+import com.aliyun.dts.subscribe.clients.record.UserRecord;
+import com.aliyun.dts.subscribe.clients.record.fast.LazyParseRecordImpl;
+import com.aliyun.dts.subscribe.clients.record.fast.LazyRecordDeserializer;
 import com.aliyun.dts.subscribe.clients.recordfetcher.OffsetCommitCallBack;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.TopicPartition;
@@ -36,7 +38,7 @@ public class UserRecordGenerator implements Runnable, Closeable {
     protected final LinkedBlockingQueue<ConsumerRecord> toProcessRecord;
     protected final AvroDeserializer fastDeserializer;
 
-    protected final LinkedBlockingQueue<DefaultUserRecord> processedRecord;
+    protected final LinkedBlockingQueue<UserRecord> processedRecord;
 
     protected volatile Checkpoint commitCheckpoint;
     protected WorkThread commitThread;
@@ -47,7 +49,7 @@ public class UserRecordGenerator implements Runnable, Closeable {
     protected final Sensor recordStoreOutCountSensor;
     protected final Sensor recordStoreOutByteSensor;
 
-    public UserRecordGenerator(ConsumerContext consumerContext, LinkedBlockingQueue<ConsumerRecord> toProcessRecord, LinkedBlockingQueue<DefaultUserRecord> processedRecord,
+    public UserRecordGenerator(ConsumerContext consumerContext, LinkedBlockingQueue<ConsumerRecord> toProcessRecord, LinkedBlockingQueue<UserRecord> processedRecord,
                                OffsetCommitCallBack offsetCommitCallBack) {
         this.consumerContext = consumerContext;
         this.toProcessRecord = toProcessRecord;
@@ -80,8 +82,8 @@ public class UserRecordGenerator implements Runnable, Closeable {
     public void run() {
         while (!consumerContext.isExited()) {
             ConsumerRecord<byte[], byte[]> toProcess = null;
-            Record record = null;
             int fetchFailedCount = 0;
+            UserRecord userRecord = null;
             try {
                 while (null == (toProcess = toProcessRecord.peek()) && !consumerContext.isExited()) {
                     sleepMS(5);
@@ -95,39 +97,46 @@ public class UserRecordGenerator implements Runnable, Closeable {
                 }
                 final ConsumerRecord<byte[], byte[]> consumerRecord = toProcess;
                 consumerRecord.timestamp();
-                record = fastDeserializer.deserialize(consumerRecord.value());
-                log.debug("UserRecordGenerator: meet [{}] record type", record.getOperation());
 
-                DefaultUserRecord defaultUserRecord = new DefaultUserRecord(new TopicPartition(consumerRecord.topic(), consumerRecord.partition()), consumerRecord.offset(),
-                        record,
-                        (tp, commitRecord, offset, metadata) -> {
+                UserCommitCallBack userCommitCallBack =  (tp, sourceTimestamp, offset, metadata) -> {
+                    recordStoreOutCountSensor.record(1);
+                    recordStoreOutByteSensor.record(consumerRecord.value().length);
+                    commitCheckpoint = new Checkpoint(tp, sourceTimestamp, offset, metadata);
+                    commit();
+                };
+
+                userRecord = new LazyParseRecordImpl(new TopicPartition(consumerRecord.topic(), consumerRecord.partition()),
+                        consumerRecord.value(),
+                        consumerRecord.offset(),
+                        new LazyRecordDeserializer(false),
+                        (tp, sourceTimestamp, offset, metadata) -> {
                             recordStoreOutCountSensor.record(1);
                             recordStoreOutByteSensor.record(consumerRecord.value().length);
-                            commitCheckpoint = new Checkpoint(tp, commitRecord.getSourceTimestamp(), offset, metadata);
+                            commitCheckpoint = new Checkpoint(tp, sourceTimestamp, offset, metadata);
                             commit();
                         });
 
                 int offerTryCount = 0;
 
-                while (!offerRecord(1000, TimeUnit.MILLISECONDS, defaultUserRecord) && !consumerContext.isExited()) {
+                while (!offerRecord(1000, TimeUnit.MILLISECONDS, userRecord) && !consumerContext.isExited()) {
                     if (++offerTryCount % 10 == 0) {
-                        log.info("UserRecordGenerator: offer user record has failed for a period (10s) [ " + record + "]");
+                        log.info("UserRecordGenerator: offer user record has failed for a period (10s) [ " + userRecord + "]");
                     }
                 }
 
                 toProcessRecord.poll();
             } catch (Exception e) {
-                log.error("UserRecordGenerator: process record failed, raw consumer record [" + toProcess + "], parsed record [" + record + "], cause " + e.getMessage(), e);
+                log.error("UserRecordGenerator: process record failed, raw consumer record [" + toProcess + "], parsed record [" + userRecord + "], cause " + e.getMessage(), e);
                 consumerContext.exit();
             }
         }
     }
 
-    protected boolean offerRecord(int timeOut, TimeUnit timeUnit, DefaultUserRecord defaultUserRecord) {
+    protected boolean offerRecord(int timeOut, TimeUnit timeUnit, UserRecord userRecord) {
         try {
-            return processedRecord.offer(defaultUserRecord, timeOut, timeUnit);
+            return processedRecord.offer(userRecord, timeOut, timeUnit);
         } catch (Exception e) {
-            log.error("UserRecordGenerator: offer record failed, record[" + defaultUserRecord + "], cause " + e.getMessage(), e);
+            log.error("UserRecordGenerator: offer record failed, record[" + userRecord + "], cause " + e.getMessage(), e);
             return false;
         }
     }
