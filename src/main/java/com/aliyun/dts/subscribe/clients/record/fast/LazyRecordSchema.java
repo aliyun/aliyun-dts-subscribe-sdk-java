@@ -310,7 +310,15 @@ public class LazyRecordSchema implements RecordSchema {
 
     @Override
     public String toString() {
-        return getDatabaseName().get() + "." + getTableName().get();
+        String databaseName = getDatabaseName().orElse("");
+        String tableName = getTableName().orElse("");
+        return "{"
+                + ", \nrecordFields= " + getFields() + ""
+                + ", \ndatabaseName='" + databaseName + '\''
+                + ", \ntableName='" + tableName + '\''
+                + ", \nprimaryIndexInfo [" + getPrimaryIndexInfo() + "]"
+                + ", \nuniqueIndexInfo [" + getUniqueIndexInfo() + "]"
+                + '}';
     }
 
     @Override
