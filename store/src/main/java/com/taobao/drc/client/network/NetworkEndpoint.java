@@ -2,6 +2,7 @@ package com.taobao.drc.client.network;
 
 import com.taobao.drc.client.DRCClientException;
 import com.taobao.drc.client.Listener;
+import com.taobao.drc.client.checkpoint.CheckpointManager;
 import com.taobao.drc.client.cm.ClusterManagerFacade;
 import com.taobao.drc.client.config.UserConfig;
 import com.taobao.drc.client.enums.DBType;
@@ -126,7 +127,7 @@ public class NetworkEndpoint {
         this.transportType=transportType;
     }
 
-    private void setBootstrapAttributes(final Bootstrap bootstrapLocal, final String host, final  String port, final NetworkEndpoint networkEndpoint, final UserConfig userConfig, final ConnectionStateChangeListener stateChangeListener) {
+    private void setBootstrapAttributes(final Bootstrap bootstrapLocal, final String host, final  String port, final NetworkEndpoint networkEndpoint, final UserConfig userConfig, final ConnectionStateChangeListener stateChangeListener, final CheckpointManager checkpointManager) {
         log.info("set attributes for bootstrap connecting to [" + host + ":" + port + "]");
         bootstrapLocal.attr(configKey, userConfig);
         bootstrapLocal.attr(channelSetKey, channelSet);
@@ -134,17 +135,20 @@ public class NetworkEndpoint {
         if (null != stateChangeListener) {
             bootstrapLocal.attr(ConnectionStateChangeListener.CONNECTION_STATE_CHANGE_LISTENER_ATTRIBUTE_KEY, stateChangeListener);
         }
+        if (null != checkpointManager) {
+            bootstrapLocal.attr(checkpointManagerKey, checkpointManager);
+        }
         bootstrapLocal.attr(listenerKey, listener);
     }
 
 
 
     public ChannelFuture connectStoreByHTTP(final String host, final String port, final UserConfig userConfig,
-                                            final ConnectionStateChangeListener stateChangeListener) throws Exception {
+                                            final ConnectionStateChangeListener stateChangeListener, final CheckpointManager checkpointManager) throws Exception {
         final String uri = "http://" + host + ":" + port + "/" + userConfig.getSubTopic();
         Bootstrap localBootstrap = bootstrap.clone();
         // set attribute before connect
-        setBootstrapAttributes(localBootstrap, host, port, this, userConfig, stateChangeListener);
+        setBootstrapAttributes(localBootstrap, host, port, this, userConfig, stateChangeListener, checkpointManager);
         //connect
         ChannelFuture future = localBootstrap.connect(host, Integer.parseInt(port));
         final NetworkEndpoint networkEndpoint=this;
@@ -186,10 +190,10 @@ public class NetworkEndpoint {
     }
 
     public ChannelFuture connectStoreByDRCNet(final String host, final String port, final UserConfig userConfig,
-                                              final ConnectionStateChangeListener stateChangeListener) throws Exception {
+                                              final ConnectionStateChangeListener stateChangeListener, final CheckpointManager checkpointManager) throws Exception {
         Bootstrap localBootstrap = bootstrap.clone();
         // set attribute before connect
-        setBootstrapAttributes(localBootstrap, host, port, this, userConfig, stateChangeListener);
+        setBootstrapAttributes(localBootstrap, host, port, this, userConfig, stateChangeListener, checkpointManager);
         final ChannelFuture channelFuture = localBootstrap.connect(host, Integer.parseInt(port));
         final NetworkEndpoint networkEndpoint=this;
         channelFuture.addListener(new ChannelFutureListener(){
@@ -303,13 +307,18 @@ public class NetworkEndpoint {
 
     public ChannelFuture connectToStore(ClusterManagerFacade.StoreInfo storeInfo, UserConfig userConfig,
                                          ConnectionStateChangeListener stateChangeListener) throws Exception {
+        return connectToStore(storeInfo, userConfig, stateChangeListener, null);
+    }
+
+    public ChannelFuture connectToStore(ClusterManagerFacade.StoreInfo storeInfo, UserConfig userConfig,
+                                         ConnectionStateChangeListener stateChangeListener, CheckpointManager checkpointManager) throws Exception {
         switch (userConfig.getTransportType()) {
             case HTTP:
                 return connectStoreByHTTP(storeInfo.getHost(), String.valueOf(storeInfo.getPort()),
-                        userConfig, stateChangeListener);
+                        userConfig, stateChangeListener, checkpointManager);
             case DRCNET:
                 return connectStoreByDRCNet(storeInfo.getHost(), String.valueOf(storeInfo.getDrcNetPort()),
-                        userConfig, stateChangeListener);
+                        userConfig, stateChangeListener, checkpointManager);
             default:
                 throw new IllegalArgumentException("Unsupported transport type: [" + transportType + "]");
         }

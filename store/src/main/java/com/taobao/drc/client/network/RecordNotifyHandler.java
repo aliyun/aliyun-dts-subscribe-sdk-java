@@ -29,6 +29,7 @@ public class RecordNotifyHandler extends ChannelInboundHandlerAdapter {
 
     private final CongestionController congestionController;
     private volatile RecordNotifyHelper helper;
+    private volatile CheckpointManager checkpointManager;
 
     public RecordNotifyHandler(CongestionController congestionController) {
         this.congestionController = congestionController;
@@ -55,7 +56,11 @@ public class RecordNotifyHandler extends ChannelInboundHandlerAdapter {
 
         Attribute attr = ctx.channel().attr(Constant.configKey);
         userConfig = (UserConfig) attr.get();
-        helper = new RecordNotifyHelper(userConfig, new CheckpointManager(userConfig.isMultiMode()), messageListener);
+        CheckpointManager registeredCheckpointManager = ctx.channel().attr(NetworkConstant.checkpointManagerKey).get();
+        checkpointManager = null != registeredCheckpointManager
+                ? registeredCheckpointManager
+                : new CheckpointManager(userConfig.isMultiMode());
+        helper = new RecordNotifyHelper(userConfig, checkpointManager, messageListener);
         ctx.fireChannelActive();
         getStateChangeListener(ctx).onChannelActive(ctx.channel());
     }
@@ -76,7 +81,7 @@ public class RecordNotifyHandler extends ChannelInboundHandlerAdapter {
             ConnectionStateChangeListener stateChangeListener = ctx.channel().attr(NetworkConstant.CONNECTION_STATE_CHANGE_LISTENER_ATTRIBUTE_KEY).get();
             NetworkEndpoint networkEndpoint = ctx.channel().attr(NetworkConstant.networkKey).get();
 
-            ctx.executor().schedule(new ReconnectTask(ctx.executor(), networkEndpoint, userConfig, stateChangeListener), backOffMs, TimeUnit.MILLISECONDS);
+            ctx.executor().schedule(new ReconnectTask(ctx.executor(), networkEndpoint, userConfig, stateChangeListener, checkpointManager), backOffMs, TimeUnit.MILLISECONDS);
         } else {
             log.warn("Do not reconnect [" + userConfig.getSubTopic() + "]");
         }
