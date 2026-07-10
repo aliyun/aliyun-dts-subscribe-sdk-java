@@ -99,6 +99,7 @@ public class DStoreClientImpl  extends AbstractStoreClient {
                         public void run() {
                             try {
                                 UserConfig uc;
+                                CheckpointManager cm;
                                 if (!userConfigMap.containsKey(topic)) {
                                     uc = (UserConfig) BeanUtils.cloneBean(userConfig);
                                     uc.setMultiMode(true);
@@ -110,11 +111,12 @@ public class DStoreClientImpl  extends AbstractStoreClient {
                                     userConfigMap.put(topic, uc);
 
                                     //checkpoint
-                                    CheckpointManager checkpointManager = new CheckpointManager(userConfig.isMultiMode());
-                                    checkpointManager.setMultiMode(true);
-                                    checkpointManagerMap.put(topic, checkpointManager);
+                                    cm = new CheckpointManager(userConfig.isMultiMode());
+                                    cm.setMultiMode(true);
+                                    checkpointManagerMap.put(topic, cm);
                                 } else {
                                     uc = userConfigMap.get(topic);
+                                    cm = checkpointManagerMap.get(topic);
                                 }
                                 log.info("DTSClient start, subTopic:" + topic);
                                 //register channelId
@@ -122,7 +124,7 @@ public class DStoreClientImpl  extends AbstractStoreClient {
                                 //kafka
                                 uc.setDtsChannelId(channelId);
                                 //block thread
-                                endpoint.connectToStoreThenWait(uc, checkpointManager);
+                                endpoint.connectToStoreThenWait(uc, cm);
                                 readRecordCount.incrementAndGet();
                             } catch (DStoreOffsetNotExistException e) {
                                 throw e;

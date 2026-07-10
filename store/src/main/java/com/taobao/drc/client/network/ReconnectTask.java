@@ -1,5 +1,6 @@
 package com.taobao.drc.client.network;
 
+import com.taobao.drc.client.checkpoint.CheckpointManager;
 import com.taobao.drc.client.cm.ClusterManagerFacade;
 import com.taobao.drc.client.config.UserConfig;
 import com.taobao.drc.client.enums.TransportType;
@@ -21,13 +22,20 @@ public class ReconnectTask implements Runnable{
     private final NetworkEndpoint networkEndpoint;
     private final UserConfig userConfig;
     private final ConnectionStateChangeListener stateChangeListener;
+    private final CheckpointManager checkpointManager;
 
     public ReconnectTask(EventExecutor executor, NetworkEndpoint networkEndpoint, UserConfig userConfig,
                          ConnectionStateChangeListener stateChangeListener) {
+        this(executor, networkEndpoint, userConfig, stateChangeListener, null);
+    }
+
+    public ReconnectTask(EventExecutor executor, NetworkEndpoint networkEndpoint, UserConfig userConfig,
+                         ConnectionStateChangeListener stateChangeListener, CheckpointManager checkpointManager) {
         this.executor = executor;
         this.networkEndpoint = networkEndpoint;
         this.userConfig = userConfig;
         this.stateChangeListener = stateChangeListener;
+        this.checkpointManager = checkpointManager;
     }
 
     @Override
@@ -38,14 +46,14 @@ public class ReconnectTask implements Runnable{
                 log.info("start reconnect,subTopic:" + userConfig.getSubTopic());
                 ClusterManagerFacade.askToken(userConfig);
                 ClusterManagerFacade.StoreInfo storeInfo = ClusterManagerFacade.fetchStoreInfo(userConfig, userConfig.getTransportType() == TransportType.DRCNET);
-                ChannelFuture channelFuture = networkEndpoint.connectToStore(storeInfo, userConfig, stateChangeListener);
+                ChannelFuture channelFuture = networkEndpoint.connectToStore(storeInfo, userConfig, stateChangeListener, checkpointManager);
                 channelFuture.sync();
                 log.info("client restart,subTopic:" + userConfig.getSubTopic() + " ,checkpoint:" + userConfig.getCheckpoint().toString());
             }catch (Exception e){
                 log.error("reconnect error",e);
                 long backOffMs = stateChangeListener.onException(null, e);
                 if (backOffMs >= 0) {
-                    executor.schedule(new ReconnectTask(executor, networkEndpoint, userConfig, stateChangeListener),
+                    executor.schedule(new ReconnectTask(executor, networkEndpoint, userConfig, stateChangeListener, checkpointManager),
                             backOffMs, TimeUnit.MILLISECONDS);
                     log.error("Reconnect failed, schedule another reconnect after [" + backOffMs + "] milliseconds");
                 } else {

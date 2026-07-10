@@ -133,6 +133,7 @@ public class DRCStoreClientImpl extends AbstractStoreClient {
                         public void run() {
                             try {
                                 UserConfig uc;
+                                CheckpointManager cm;
                                 if (!userConfigMap.containsKey(subTopic)) {
                                     validateDataFilter(subTopic);
                                     uc = (UserConfig) BeanUtils.cloneBean(userConfig);
@@ -145,18 +146,19 @@ public class DRCStoreClientImpl extends AbstractStoreClient {
                                     userConfigMap.put(subTopic, uc);
 
                                     //checkpoint
-                                    CheckpointManager checkpointManager = new CheckpointManager(uc.isMultiMode());
-                                    checkpointManager.setMultiMode(true);
-                                    checkpointManagerMap.put(subTopic, checkpointManager);
+                                    cm = new CheckpointManager(uc.isMultiMode());
+                                    cm.setMultiMode(true);
+                                    checkpointManagerMap.put(subTopic, cm);
                                 } else {
                                     uc = userConfigMap.get(subTopic);
+                                    cm = checkpointManagerMap.get(subTopic);
 
                                     //token maybe expired
                                     ClusterManagerFacade.askToken(uc);
                                 }
                                 ClusterManagerFacade.StoreInfo storeInfo = ClusterManagerFacade.fetchStoreInfo(uc, userConfig.getTransportType() == TransportType.DRCNET);
                                 NonReconnectableConnectionStateChangeListener stateListener = new NonReconnectableConnectionStateChangeListener(uc);
-                                ChannelFuture future = endpoint.connectToStore(storeInfo, uc, stateListener);
+                                ChannelFuture future = endpoint.connectToStore(storeInfo, uc, stateListener, cm);
                                 log.info("DRCClient start,subTopic:" + uc.getSubTopic() + " init checkpoint:" + uc.getCheckpoint().toString());
                                 stateListener.blockUntilDisconnected();
                                 if (stateListener.isGottenFirstRecord()) {
