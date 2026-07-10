@@ -58,7 +58,7 @@ public abstract class AbstractStoreClient implements StoreClient {
         String min = null;
         for (CheckpointManager checkpointManager : checkpointManagerMap.values()) {
             if (checkpointManager.getSaveCheckpoint() == null) {
-                break;
+                return null;
             }
             if (min == null) {
                 min = checkpointManager.getSaveCheckpoint();

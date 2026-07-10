@@ -62,6 +62,17 @@ public class MultiSafeTimestampTest {
     }
 
     @Test
+    public void anyNullSubTopicReturnsNullRegardlessOfOrder() {
+        TestStoreClient client = new TestStoreClient();
+        CheckpointManager acked = new CheckpointManager(true);
+        consumeAndAck(acked, record("2000"));
+        // valued first, null second: with `return null` semantics the result is deterministically null
+        client.register("t-0", acked);
+        client.register("t-1", new CheckpointManager(true)); // still null
+        assertNull(client.getMultiSafeTimestamp());
+    }
+
+    @Test
     public void returnsMinAcrossAllWhenEveryoneAcked() {
         TestStoreClient client = new TestStoreClient();
         CheckpointManager cm0 = new CheckpointManager(true);
