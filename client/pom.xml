@@ -51,7 +51,7 @@
     </dependency>
 
     <dependency>
-        <groupId>com.aliyun.dts</groupId>
+        <groupId>com.alibaba.dts.client</groupId>
         <artifactId>dts-client</artifactId>
         <version>${revision}</version>
     </dependency>
