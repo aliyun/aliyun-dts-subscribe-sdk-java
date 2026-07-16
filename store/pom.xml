@@ -7,6 +7,7 @@
 
     <artifactId>dts-uniform-subscribe-sdk-store</artifactId>
     <packaging>jar</packaging>
+    <name>dts-uniform-subscribe-sdk-store</name>
 
     <parent>
         <artifactId>dts-uniform-subscribe-sdk</artifactId>
