@@ -6,6 +6,7 @@
 
     <artifactId>dts-uniform-subscribe-sdk-message</artifactId>
     <packaging>jar</packaging>
+    <name>dts-uniform-subscribe-sdk-message</name>
 
     <parent>
         <artifactId>dts-uniform-subscribe-sdk</artifactId>
