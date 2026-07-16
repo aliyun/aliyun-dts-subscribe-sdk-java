@@ -123,9 +123,9 @@
                 <version>1.0</version>
             </dependency>
             <dependency>
-                <groupId>com.taobao.togo</groupId>
-                <artifactId>clients</artifactId>
-                <version>1.0.0.40-SNAPSHOT</version>
+                <groupId>com.alibaba.dts.client</groupId>
+                <artifactId>togo-clients</artifactId>
+                <version>1.0.0.45</version>
             </dependency>
             <dependency>
                 <groupId>com.google.guava</groupId>
