@@ -1,7 +1,7 @@
 package com.aliyun.dts.subscribe.clients.metastore;
 
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson2.JSONArray;
+import com.alibaba.fastjson2.JSONObject;
 import com.aliyun.dts.subscribe.clients.common.AtomicFileStore;
 import com.aliyun.dts.subscribe.clients.common.Checkpoint;
 import org.apache.commons.lang3.StringUtils;

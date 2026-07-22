@@ -1,6 +1,6 @@
 package com.aliyun.dts.subscribe.clients.metrics;
 
-import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson2.JSONObject;
 import com.aliyun.dts.subscribe.clients.common.ThreadFactoryWithNamePrefix;
 import com.aliyun.dts.subscribe.clients.exception.DTSBaseException;
 import org.apache.commons.lang3.StringUtils;

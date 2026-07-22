@@ -1,6 +1,6 @@
 package com.aliyun.dms.subscribe.clients;
 
-import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson2.JSONObject;
 import com.aliyun.dts.subscribe.clients.common.RetryUtil;
 import com.aliyun.dts.subscribe.clients.formats.avro.Operation;
 import com.aliyun.dts.subscribe.clients.formats.avro.Record;
