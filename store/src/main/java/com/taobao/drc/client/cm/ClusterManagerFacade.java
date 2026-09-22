@@ -325,6 +325,11 @@ public class ClusterManagerFacade {
      * @return channelId
      */
     public static String enrollDStoreChannel(UserConfig userConfig) {
+        return enrollDStoreChannel(userConfig, userConfig.getCheckpoint() == null
+                ? null : userConfig.getCheckpoint().getTimestamp());
+    }
+
+    public static String enrollDStoreChannel(UserConfig userConfig, String recoveryTimestamp) {
         String url = String.format("%s/client/switch/channel/register", userConfig.getClusterUrl());
         try {
             List<NameValuePair> params = new ArrayList<NameValuePair>();
@@ -332,8 +337,8 @@ public class ClusterManagerFacade {
             params.add(new BasicNameValuePair("topic", userConfig.getSubTopic()));
             params.add(new BasicNameValuePair("regionCode", StringUtils.trimToEmpty(userConfig.getRegionCode())));
             params.add(new BasicNameValuePair("consumer", userConfig.getUserName()));
-            if (null != userConfig.getCheckpoint()) {
-                params.add(new BasicNameValuePair("checkpoint", userConfig.getCheckpoint().getTimestamp()));
+            if (null != recoveryTimestamp) {
+                params.add(new BasicNameValuePair("checkpoint", recoveryTimestamp));
             }
             params.add(new BasicNameValuePair("__skipAuth", userConfig.isSkipAuth() + ""));
             log.info(url + " " + params);

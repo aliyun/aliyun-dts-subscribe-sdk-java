@@ -4,11 +4,13 @@ import com.aliyun.dts.subscribe.clients.recordfetcher.ClusterSwitchListener;
 import com.taobao.drc.client.Listener;
 import com.taobao.drc.client.checkpoint.CheckpointManager;
 import com.taobao.drc.client.config.UserConfig;
+import com.taobao.drc.client.impl.RecordsCache;
 import com.taobao.drc.client.message.DataMessage;
 import com.taobao.drc.client.network.DataFlowLimitHandler;
 import com.taobao.drc.client.network.RecordNotifyHelper;
 import com.taobao.drc.client.network.RecordPreNotifyHelper;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.beanutils.BeanUtils;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.OffsetAndTimestamp;
 import org.apache.kafka.common.TopicPartition;
@@ -33,6 +35,8 @@ public abstract class BaseDStoreConsumer extends Thread implements DStoreConsume
     protected RecordNotifyHelper notifyHeper;
     protected TopicPartition assignedPartition;
     private DataFlowLimitHandler dataFlowLimitHandler;
+    private CheckpointManager checkpointManager;
+    private String recoveryTimestamp;
 
     private final CountDownLatch sync = new CountDownLatch(1);
 
@@ -51,10 +55,31 @@ public abstract class BaseDStoreConsumer extends Thread implements DStoreConsume
     @Override
     public void init(UserConfig userConfig, CheckpointManager checkpointManager) {
         this.config = userConfig;
+        this.checkpointManager = checkpointManager;
         pollTimeOut = Integer.parseInt(userConfig.getPollTimeoutMs());
         preHelper = new RecordPreNotifyHelper(userConfig);
-        notifyHeper = new RecordNotifyHelper(userConfig, checkpointManager, listener);
+        prepareRecovery();
         dataFlowLimitHandler = new DataFlowLimitHandler(this.config);
+    }
+
+    protected void prepareRecovery() {
+        CheckpointManager.Recovery recovery = checkpointManager.beginRecovery(
+                config.getCheckpoint().getTimestamp());
+        recoveryTimestamp = recovery.getTimestamp();
+        try {
+            // An interrupted old producer can still be finishing a batch. Give
+            // each attempt its own transaction state and undelivered cache.
+            UserConfig attemptConfig = (UserConfig) BeanUtils.cloneBean(config);
+            attemptConfig.setTxBeginTimestamp(null);
+            if (config.getRecordsCache() != null) {
+                attemptConfig.setRecordsCache(new RecordsCache(config.getRecordsCache()));
+            }
+            // Keep the shared heartbeat Checkpoint for existing diagnostics;
+            // it is no longer the authority for DTS recovery.
+            notifyHeper = new RecordNotifyHelper(attemptConfig, recovery, listener);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("Cannot initialize DTS recovery for " + config.getSubTopic(), e);
+        }
     }
 
     @Override
@@ -161,7 +186,7 @@ public abstract class BaseDStoreConsumer extends Thread implements DStoreConsume
      * @return
      */
     protected long getPosition() {
-        String position = config.getCheckpoint().getTimestamp();
+        String position = recoveryTimestamp;
         Map<TopicPartition, Long> timestamp = new HashMap<TopicPartition, Long>();
         long requestedTime = Long.valueOf(position);
         timestamp.put(assignedPartition, requestedTime);
@@ -170,7 +195,8 @@ public abstract class BaseDStoreConsumer extends Thread implements DStoreConsume
             throw new DStoreOffsetNotExistException("Cannot get offset for timestamp: " + position);
         }
         OffsetAndTimestamp offsetAndTimestamp = result.get(assignedPartition);
-        logger.info("getPosition for timestamp: " + position + ", offset and timestap:" + offsetAndTimestamp);
+        logger.info("getPosition for topic: " + assignedPartition + ", safe timestamp: "
+                + position + ", offset and timestamp: " + offsetAndTimestamp);
         if (offsetAndTimestamp == null) {
             throw new DStoreOffsetNotExistException("Cannot get offset for timestamp: " + position + " on topic=" + assignedPartition.topic());
         }

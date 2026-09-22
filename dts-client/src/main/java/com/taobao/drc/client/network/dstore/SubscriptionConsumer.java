@@ -32,7 +32,7 @@ public class SubscriptionConsumer extends BaseDStoreConsumer {
     private volatile com.taobao.drc.togo.client.consumer.TogoConsumer consumer;
     private volatile FetchRule rule;
     private volatile Long lastOutOfRangeOffset = null;
-    private volatile long lastReceivedTime = 0;
+    private volatile long lastReceivedTime = System.currentTimeMillis();
     private volatile long socketTimeOut = Long.MAX_VALUE;
 
     protected ClusterSwitchListener clusterSwitchListener = new ClusterSwitchListener();
@@ -46,6 +46,7 @@ public class SubscriptionConsumer extends BaseDStoreConsumer {
         super.init(userConfig, checkpointManager);
         newConsumer(userConfig, true);
         socketTimeOut = userConfig.getSocketTimeOut();
+        lastReceivedTime = System.currentTimeMillis();
     }
 
     private void newConsumer(UserConfig userConfig, boolean configPosition) {
@@ -77,7 +78,9 @@ public class SubscriptionConsumer extends BaseDStoreConsumer {
         } catch (Throwable e) {
             logger.warn("reset dstore consumer error:" + e.getMessage());
         }
+        prepareRecovery();
         newConsumer(getConfig(), true);
+        lastReceivedTime = System.currentTimeMillis();
     }
 
     @Override
@@ -95,10 +98,12 @@ public class SubscriptionConsumer extends BaseDStoreConsumer {
             AbstractStoreClient.sendRuntimeLog(listener, "WARN", message);
             Thread.sleep(5000);
             reset();
+            return Collections.emptyList();
         } catch (ClusterSwitchListener.ClusterSwitchException e) {
             logger.warn("Cluster switch exception, reset the consumer");
             Thread.sleep(5000);
             reset();
+            return Collections.emptyList();
         }
         if (null == consumerRecords || consumerRecords.isEmpty()) {
             //If long time not got messages, Client will check dstore is ok or not.
@@ -111,8 +116,10 @@ public class SubscriptionConsumer extends BaseDStoreConsumer {
                     AbstractStoreClient.sendRuntimeLog(listener, "WARN", "Consumption switch to DRC");
                     throw new DStoreSwitchException("Consumption switch to DRC.");
                 } else {
-                    logger.error("Get consumer records empty, retrieved record count: " + consumerRecords.count());
-                    reset();
+                    // An idle (possibly filtered) stream is not a broken consumer.
+                    // Keep its current position; explicit errors handle recovery.
+                    logger.info("No records for topic " + assignedPartition
+                            + "; channel remains DTS, continuing from current position");
                 }
             }
             return Collections.emptyList();

@@ -63,7 +63,8 @@ public class DStoreClientImpl  extends AbstractStoreClient {
                     log.info("DTSClient start, subTopic:" + topics[0]);
                     userConfig.setSubTopic(topics[0]);
                     //register channelId
-                    String channelId = ClusterManagerFacade.enrollDStoreChannel(userConfig);
+                    String channelId = ClusterManagerFacade.enrollDStoreChannel(userConfig,
+                            checkpointManager.getRecoveryTimestamp(userConfig.getCheckpoint().getTimestamp()));
                     //kafka
                     userConfig.setDtsChannelId(channelId);
                     //block thread
@@ -120,7 +121,8 @@ public class DStoreClientImpl  extends AbstractStoreClient {
                                 }
                                 log.info("DTSClient start, subTopic:" + topic);
                                 //register channelId
-                                String channelId = ClusterManagerFacade.enrollDStoreChannel(uc);
+                                String channelId = ClusterManagerFacade.enrollDStoreChannel(uc,
+                                        cm.getRecoveryTimestamp(uc.getCheckpoint().getTimestamp()));
                                 //kafka
                                 uc.setDtsChannelId(channelId);
                                 //block thread
