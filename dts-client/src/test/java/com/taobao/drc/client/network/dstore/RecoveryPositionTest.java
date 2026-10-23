@@ -140,6 +140,186 @@ public class RecoveryPositionTest {
         assertEquals(1000L, consumer.requestedTimestamp);
     }
 
+    @Test public void singleServiceRecoversFromAcknowledgedTransactionBoundary() throws Exception {
+        UserConfig config = config();
+        CheckpointManager manager = new CheckpointManager(false);
+        CapturingListener listener = new CapturingListener();
+        TestConsumer first = new TestConsumer(listener);
+        first.init(config, manager);
+        first.receive(DataMessage.Record.Type.BEGIN, "1100");
+        first.receive(DataMessage.Record.Type.INSERT, "1200");
+        first.receive(DataMessage.Record.Type.HEARTBEAT, "9000");
+        listener.delivered.get(1).ackAsConsumed(); // cannot skip BEGIN
+        assertNull(manager.getSaveCheckpoint());
+        listener.delivered.get(0).ackAsConsumed();
+        listener.delivered.get(0).ackAsConsumed();
+        assertEquals("1100", manager.getSaveCheckpoint());
+        TestConsumer recovered = new TestConsumer(listener);
+        recovered.init(config, manager);
+        recovered.getPosition();
+        assertEquals(1100L, recovered.requestedTimestamp);
+        listener.delivered.get(2).ackAsConsumed(); // old generation
+        assertEquals("1100", manager.getSaveCheckpoint());
+        recovered.receive(DataMessage.Record.Type.INSERT, "1300");
+        listener.delivered.get(3).ackAsConsumed();
+        assertEquals("1300", manager.getSaveCheckpoint());
+    }
+
+    @Test public void singleServiceWithoutAcksHasBoundedTrackingAndDoesNotSkipOverflow() throws Exception {
+        CheckpointManager manager = new CheckpointManager(false);
+        CapturingListener listener = new CapturingListener();
+        TestConsumer consumer = new TestConsumer(listener);
+        UserConfig config = config();
+        consumer.init(config, manager);
+        for (int i = 0; i < 10241; i++) {
+            consumer.receive(DataMessage.Record.Type.INSERT, Integer.toString(1100 + i));
+        }
+        for (DataMessage.Record record : listener.delivered) {
+            assertNull(record.getPrev());
+            record.ackAsConsumed();
+        }
+        assertNull(manager.getSaveCheckpoint());
+        consumer.init(config, manager);
+        consumer.getPosition();
+        assertEquals(1000L, consumer.requestedTimestamp);
+        consumer.receive(DataMessage.Record.Type.INSERT, "1200");
+        listener.delivered.get(10241).ackAsConsumed();
+        assertEquals("1200", manager.getSaveCheckpoint());
+    }
+
+    @Test public void singleServiceOverflowFreezesPreviouslyConfirmedBoundary() throws Exception {
+        CheckpointManager manager = new CheckpointManager(false);
+        CapturingListener listener = new CapturingListener();
+        TestConsumer consumer = new TestConsumer(listener);
+        consumer.init(config(), manager);
+        consumer.receive(DataMessage.Record.Type.INSERT, "1100");
+        listener.delivered.get(0).ackAsConsumed();
+        for (int i = 0; i < 10241; i++) {
+            consumer.receive(DataMessage.Record.Type.INSERT, Integer.toString(1200 + i));
+        }
+        for (DataMessage.Record record : listener.delivered) record.ackAsConsumed();
+        assertEquals("1100", manager.getSaveCheckpoint());
+        assertEquals("1100", manager.prepareRecovery("9000"));
+        consumer.init(config(), manager);
+        consumer.getPosition();
+        assertEquals(1100L, consumer.requestedTimestamp);
+    }
+
+    @Test public void overflowAndAckRaceCannotSkipAnUnconfirmedHead() throws Exception {
+        java.util.concurrent.ExecutorService threads = java.util.concurrent.Executors.newFixedThreadPool(2);
+        try {
+            for (int attempt = 0; attempt < 8; attempt++) {
+                CheckpointManager manager = new CheckpointManager(false);
+                CheckpointManager.Recovery recovery = manager.beginRecovery("1000");
+                List<DataMessage.Record> records = new ArrayList<DataMessage.Record>();
+                for (int i = 0; i < 10241; i++) {
+                    DataMessage.Record record = new DataMessage.Record();
+                    record.setSafeTimestamp(Integer.toString(1100 + i));
+                    record.setCheckpointManager(recovery);
+                    records.add(record);
+                    if (i < 10240) recovery.addRecord(record);
+                }
+                java.util.concurrent.CountDownLatch start = new java.util.concurrent.CountDownLatch(1);
+                java.util.concurrent.Future<?> ack = threads.submit(() -> {
+                    start.await();
+                    records.get(0).ackAsConsumed();
+                    return null;
+                });
+                java.util.concurrent.Future<?> add = threads.submit(() -> {
+                    start.await();
+                    recovery.addRecord(records.get(10240));
+                    return null;
+                });
+                start.countDown();
+                ack.get(5, java.util.concurrent.TimeUnit.SECONDS);
+                add.get(5, java.util.concurrent.TimeUnit.SECONDS);
+                String confirmed = manager.getSaveCheckpoint();
+                assertTrue(confirmed == null || confirmed.equals("1100"));
+                // Leave the second record unconfirmed; later acks cannot skip it.
+                for (int i = 2; i < records.size(); i++) records.get(i).ackAsConsumed();
+                assertEquals(confirmed, manager.getSaveCheckpoint());
+            }
+        } finally {
+            threads.shutdownNow();
+        }
+    }
+
+    @Test public void registrationFreezesBoundaryAndFencesLateAcksBeforeSeek() throws Exception {
+        CheckpointManager manager = new CheckpointManager(false);
+        CapturingListener listener = new CapturingListener();
+        TestConsumer consumer = new TestConsumer(listener);
+        UserConfig config = config();
+        consumer.init(config, manager);
+        consumer.receive(DataMessage.Record.Type.INSERT, "1100");
+        consumer.receive(DataMessage.Record.Type.INSERT, "1200");
+        listener.delivered.get(0).ackAsConsumed();
+        assertEquals("1100", manager.prepareRecovery("9000"));
+        listener.delivered.get(1).ackAsConsumed();
+        // Simulate a failed registration: another attempt precedes consumer init.
+        assertEquals("1100", manager.prepareRecovery("9000"));
+        consumer.init(config, manager);
+        consumer.getPosition();
+        assertEquals(1100L, consumer.requestedTimestamp);
+    }
+
+    @Test public void committedTransactionAdvancesButNextUnconfirmedTransactionDoesNot() throws Exception {
+        CheckpointManager manager = new CheckpointManager(false);
+        CapturingListener listener = new CapturingListener();
+        TestConsumer consumer = new TestConsumer(listener);
+        UserConfig config = config();
+        consumer.init(config, manager);
+        consumer.receive(DataMessage.Record.Type.BEGIN, "1100");
+        consumer.receive(DataMessage.Record.Type.INSERT, "1200");
+        consumer.receive(DataMessage.Record.Type.COMMIT, "1300");
+        for (DataMessage.Record record : listener.delivered) record.ackAsConsumed();
+        consumer.receive(DataMessage.Record.Type.BEGIN, "1400");
+        consumer.receive(DataMessage.Record.Type.INSERT, "1500");
+        consumer.receive(DataMessage.Record.Type.HEARTBEAT, "9000");
+        listener.delivered.get(4).ackAsConsumed();
+        listener.delivered.get(5).ackAsConsumed();
+        assertEquals("1300", manager.getSaveCheckpoint());
+        consumer.init(config, manager);
+        consumer.getPosition();
+        assertEquals(1300L, consumer.requestedTimestamp);
+    }
+
+    @Test public void singleServiceCallbackFailureCannotBeSkippedByLaterHeartbeatAck() throws Exception {
+        CheckpointManager manager = new CheckpointManager(false);
+        Listener listener = new Listener() {
+            public void notify(DataMessage message) throws Exception {
+                for (DataMessage.Record record : message.getRecordList()) {
+                    if (record.getOpt() == DataMessage.Record.Type.INSERT) {
+                        throw new Exception("target write failed");
+                    }
+                    record.ackAsConsumed();
+                }
+            }
+            public void notifyRuntimeLog(String level, String message) { }
+            public void handleException(Exception e) { }
+        };
+        TestConsumer consumer = new TestConsumer(listener);
+        UserConfig config = config();
+        consumer.init(config, manager);
+        consumer.receive(DataMessage.Record.Type.INSERT, "1100");
+        consumer.receive(DataMessage.Record.Type.HEARTBEAT, "9000");
+        assertNull(manager.getSaveCheckpoint());
+        consumer.init(config, manager);
+        consumer.getPosition();
+        assertEquals(1000L, consumer.requestedTimestamp);
+    }
+
+    @Test public void singleServiceTimelyAcksDoNotExhaustPendingLimit() throws Exception {
+        CheckpointManager manager = new CheckpointManager(false);
+        CapturingListener listener = new CapturingListener();
+        TestConsumer consumer = new TestConsumer(listener);
+        consumer.init(config(), manager);
+        for (int i = 0; i < 10241; i++) {
+            consumer.receive(DataMessage.Record.Type.INSERT, Integer.toString(1100 + i));
+            listener.delivered.get(i).ackAsConsumed();
+        }
+        assertEquals("11340", manager.getSaveCheckpoint());
+    }
+
     @Test public void oldProducerCannotPutRecordsIntoRecoveredCache() throws Exception {
         UserConfig config = config();
         RecordsCache cache = new RecordsCache();

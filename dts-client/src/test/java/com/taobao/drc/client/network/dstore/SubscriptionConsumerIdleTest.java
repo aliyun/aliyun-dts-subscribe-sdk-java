@@ -2,6 +2,8 @@ package com.taobao.drc.client.network.dstore;
 
 import com.sun.net.httpserver.HttpServer;
 import com.taobao.drc.client.config.UserConfig;
+import com.taobao.drc.client.SubscribeChannel;
+import com.taobao.drc.client.cm.ClusterManagerFacade;
 import com.taobao.drc.togo.client.consumer.SchemafulConsumerRecords;
 import com.taobao.drc.togo.client.consumer.TogoConsumer;
 import org.junit.After;
@@ -21,6 +23,7 @@ public class SubscriptionConsumerIdleTest {
     private HttpServer cm;
     private final AtomicInteger requests = new AtomicInteger();
     private String channel = "dts";
+    private String response;
     private SubscriptionConsumer consumer;
     private TogoConsumer transport;
 
@@ -28,7 +31,7 @@ public class SubscriptionConsumerIdleTest {
         cm = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         cm.createContext("/client/switch/verify", exchange -> {
             requests.incrementAndGet();
-            byte[] body = ("{\"isSuccess\":true,\"data\":{\"taskType\":\"" + channel + "\"}}")
+            byte[] body = (response != null ? response : "{\"isSuccess\":true,\"data\":{\"taskType\":\"" + channel + "\"}}")
                     .getBytes(StandardCharsets.UTF_8);
             exchange.sendResponseHeaders(200, body.length);
             exchange.getResponseBody().write(body);
@@ -39,6 +42,7 @@ public class SubscriptionConsumerIdleTest {
         config.setClusterUrl("http://127.0.0.1:" + cm.getAddress().getPort());
         config.setDb("test");
         config.setUserName("test");
+        config.setSubscribeChannel(SubscribeChannel.DTS);
         consumer = new SubscriptionConsumer(null);
         consumer.config = config;
         transport = mock(TogoConsumer.class);
@@ -81,5 +85,24 @@ public class SubscriptionConsumerIdleTest {
         channel = "drc";
         set("lastReceivedTime", 1L);
         consumer.poll(1);
+    }
+
+    @Test public void failedVerificationKeepsDtsInsteadOfTriggeringRecovery() throws Exception {
+        for (String body : new String[] {"not json", "{\"isSuccess\":false}",
+                "{\"isSuccess\":true,\"data\":{\"taskType\":\"unknown\"}}",
+                "{\"isSuccess\":true,\"data\":{}}"}) {
+            response = body;
+            set("lastReceivedTime", 1L);
+            assertEmptyWithoutReset();
+        }
+    }
+
+    @Test public void unreachableVerificationKeepsKnownChannel() {
+        consumer.config.setClusterUrl("http://127.0.0.1:0");
+        assertEquals(SubscribeChannel.DTS,
+                ClusterManagerFacade.askSubscribeChannelAndRedirect(consumer.config));
+        consumer.config.setSubscribeChannel(SubscribeChannel.DRC);
+        assertEquals(SubscribeChannel.DRC,
+                ClusterManagerFacade.askSubscribeChannelAndRedirect(consumer.config));
     }
 }

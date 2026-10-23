@@ -7,6 +7,9 @@ import com.taobao.drc.client.config.UserConfig;
 import com.taobao.drc.client.impl.Checkpoint;
 import com.taobao.drc.client.message.DataMessage;
 import com.taobao.drc.client.network.DStoreNetworkEndpoint;
+import com.taobao.drc.client.network.RecordNotifyHelper;
+import com.taobao.drc.client.Listener;
+import com.taobao.drc.client.enums.DBType;
 import org.junit.Test;
 
 import java.lang.reflect.Field;
@@ -64,11 +67,21 @@ public class DStoreRegistrationPositionTest {
             config.setSubTopic("test-0");
             config.setSubscribeChannel(SubscribeChannel.DTS);
             config.setClusterUrl("http://127.0.0.1:" + server.getAddress().getPort());
-            CheckpointManager manager = new CheckpointManager(true);
-            DataMessage.Record acknowledged = new DataMessage.Record();
-            acknowledged.setSafeTimestamp("1200");
-            manager.addRecord(acknowledged);
-            manager.removeRecord(acknowledged);
+            CheckpointManager manager = new CheckpointManager(multiService);
+            Listener listener = mock(Listener.class);
+            doAnswer(invocation -> {
+                DataMessage message = (DataMessage) invocation.getArguments()[0];
+                for (DataMessage.Record record : message.getRecordList()) {
+                    record.ackAsConsumed();
+                }
+                return null;
+            }).when(listener).notify(any(DataMessage.class));
+            RecordNotifyHelper helper = new RecordNotifyHelper(config, manager.beginRecovery("1000"), listener);
+            helper.process(new DataMessage.Record() {
+                @Override public Type getOpt() { return Type.INSERT; }
+                @Override public String getTimestamp() { return "1200"; }
+                @Override public DBType getDbType() { return DBType.MYSQL; }
+            });
             client = new Client(config, manager);
             Field endpoint = DStoreClientImpl.class.getDeclaredField("endpoint");
             endpoint.setAccessible(true);
@@ -76,6 +89,7 @@ public class DStoreRegistrationPositionTest {
             assertTrue((multiService ? client.startMultiService() : client.startService()).call());
             assertNotNull(form.get());
             assertTrue(form.get(), form.get().contains("checkpoint=1200"));
+            assertEquals("1200", manager.beginRecovery("1000").getTimestamp());
             assertEquals("1000", checkpoint.getTimestamp());
         } finally {
             if (client != null) client.stopService();
