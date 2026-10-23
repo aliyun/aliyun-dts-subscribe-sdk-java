@@ -237,21 +237,27 @@ public class ClusterManagerFacade {
             log.info(url + "    ->    " + result);
             JSONObject jsonObject = JSON.parseObject(result);
             if (jsonObject.getBoolean(KEY_IS_SUCCESS)) {
+                JSONObject data = jsonObject.getJSONObject("data");
+                // Unknown/missing types are failed verification, not a DRC switch.
+                SubscribeChannel channel = SubscribeChannel.valueOf(
+                        data.getString("taskType").toUpperCase(java.util.Locale.ROOT));
                 String redirectUrl = jsonObject.getString("redirectUrl");
                 if (StringUtils.isNotEmpty(redirectUrl)) {
                     log.warn("redirectUrl is not null, redirect from [" + userConfig.getClusterUrl() + "] to [" + redirectUrl + "]");
                     userConfig.setClusterUrl(redirectUrl);
                 }
 
-                JSONObject data = jsonObject.getJSONObject("data");
-                return SubscribeChannel.valueBy(data.getString("taskType"));
+                return channel;
             } else {
                 log.error("ask subscription channel failed:" + StringUtils.trimToEmpty(jsonObject.getString("msg")));
             }
         } catch (Throwable e) {
             log.warn("ask subscription channel failed:" + e.getMessage());
         }
-        return SubscribeChannel.DRC;
+        // A transient CM failure must not turn an established DTS stream into
+        // a channel switch. Preserve the historical default only at bootstrap.
+        return userConfig.getSubscribeChannel() == null
+                ? SubscribeChannel.DRC : userConfig.getSubscribeChannel();
     }
 
     /**
