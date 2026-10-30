@@ -44,9 +44,13 @@ public class ReconnectTask implements Runnable{
         if(!networkEndpoint.isClose()) {
             try {
                 log.info("start reconnect,subTopic:" + userConfig.getSubTopic());
+                long generation = networkEndpoint.getGeneration();
+                if (checkpointManager != null) {
+                    userConfig.getCheckpoint().setTimestamp(checkpointManager.prepareDrcRecovery(userConfig.getCheckpoint().getTimestamp()));
+                }
                 ClusterManagerFacade.askToken(userConfig);
                 ClusterManagerFacade.StoreInfo storeInfo = ClusterManagerFacade.fetchStoreInfo(userConfig, userConfig.getTransportType() == TransportType.DRCNET);
-                ChannelFuture channelFuture = networkEndpoint.connectToStore(storeInfo, userConfig, stateChangeListener, checkpointManager);
+                ChannelFuture channelFuture = networkEndpoint.connectToStore(storeInfo, userConfig, stateChangeListener, checkpointManager, generation);
                 channelFuture.sync();
                 log.info("client restart,subTopic:" + userConfig.getSubTopic() + " ,checkpoint:" + userConfig.getCheckpoint().toString());
             }catch (Exception e){

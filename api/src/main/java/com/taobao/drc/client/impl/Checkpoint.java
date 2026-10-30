@@ -31,6 +31,7 @@ public class Checkpoint {
 
     public Checkpoint(final Checkpoint cp) {
         this(cp.recordId, cp.position, cp.serverId, cp.timestamp);
+        this.offset = cp.offset;
     }
 
     public boolean equals(final String cp) {

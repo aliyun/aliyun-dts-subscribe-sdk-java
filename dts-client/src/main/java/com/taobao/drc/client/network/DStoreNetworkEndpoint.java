@@ -10,6 +10,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -20,6 +22,8 @@ public class DStoreNetworkEndpoint {
     private static final Logger log = LoggerFactory.getLogger(DStoreNetworkEndpoint.class);
     private final Map<String, DStoreConsumer> channels = new ConcurrentHashMap<String, DStoreConsumer>();
     private Listener listener;
+    private final Object lifecycleLock = new Object();
+    private long closeGeneration;
 
     public void setMessageListener(Listener listener) {
         this.listener = listener;
@@ -32,36 +36,73 @@ public class DStoreNetworkEndpoint {
      * @param userConfig
      */
     public void connectToStoreThenWait(UserConfig userConfig, CheckpointManager checkpointManager) {
+        connectToStoreThenWait(userConfig, checkpointManager, getGeneration());
+    }
+
+    /** Capture before CM registration, so a stop during registration fences startup. */
+    public long getGeneration() {
+        synchronized (lifecycleLock) { return closeGeneration; }
+    }
+
+    public void connectToStoreThenWait(UserConfig userConfig, CheckpointManager checkpointManager, long generation) {
         if (!StringUtils.isNumeric(userConfig.getPollTimeoutMs())) {
             userConfig.setPollTimeoutMs("200");
         }
-        /*
-         * make sure the old consumer is closed
-         */
-        try {
-            DStoreConsumer consumer = channels.get(userConfig.getSubTopic());
-            if (null != consumer) {
-                consumer.interrupt();
-                channels.remove(userConfig.getSubTopic());
-            }
-        } catch (Throwable e) {
+        final DStoreConsumer previous;
+        synchronized (lifecycleLock) {
+            if (generation != closeGeneration || Thread.currentThread().isInterrupted()) { return; }
+            previous = channels.remove(userConfig.getSubTopic());
         }
-        DStoreConsumer consumer = new SubscriptionConsumer(listener);
-        consumer.init(userConfig, checkpointManager);
-        channels.put(userConfig.getSubTopic(), consumer);
-        consumer.start();
-        consumer.sync();
+        if (previous != null) {
+            previous.close();
+            awaitTermination(previous);
+        }
+        DStoreConsumer consumer = createConsumer();
+        try {
+            consumer.init(userConfig, checkpointManager);
+            synchronized (lifecycleLock) {
+                if (generation != closeGeneration || Thread.currentThread().isInterrupted()) { return; }
+                channels.put(userConfig.getSubTopic(), consumer);
+                consumer.start();
+            }
+            consumer.sync();
+        } finally {
+            consumer.close();
+            awaitTermination(consumer);
+            channels.remove(userConfig.getSubTopic(), consumer);
+        }
     }
 
+    protected DStoreConsumer createConsumer() { return new SubscriptionConsumer(listener); }
+
     public void close() {
-        try {
-            for (DStoreConsumer consumer : channels.values()) {
-                log.info("close channel [" + consumer.getConfig().getSubTopic() + "]");
-                consumer.interrupt();
-            }
+        List<DStoreConsumer> closing;
+        synchronized (lifecycleLock) {
+            closeGeneration++;
+            closing = new ArrayList<DStoreConsumer>(channels.values());
             channels.clear();
-        } catch (Throwable e) {
-            log.warn("DStore network endpoint close with error:" + e.getMessage());
         }
+        boolean calledFromConsumer = com.taobao.drc.client.impl.ListenerContext.isCallbackThread();
+        for (DStoreConsumer consumer : closing) {
+            log.info("close channel [" + consumer.getConfig().getSubTopic() + "]");
+            consumer.close();
+            calledFromConsumer |= consumer == Thread.currentThread();
+        }
+        // A listener may stop the client from its own worker. Never join other
+        // workers in that callback: concurrent callbacks could wait on each other.
+        if (!calledFromConsumer) {
+            for (DStoreConsumer consumer : closing) { awaitTermination(consumer); }
+        }
+    }
+
+    private void awaitTermination(DStoreConsumer consumer) {
+        if (!(consumer instanceof Thread) || consumer == Thread.currentThread()) { return; }
+        boolean interrupted = false;
+        Thread worker = (Thread) consumer;
+        while (worker.isAlive()) {
+            try { worker.join(); }
+            catch (InterruptedException e) { interrupted = true; }
+        }
+        if (interrupted) { Thread.currentThread().interrupt(); }
     }
 }

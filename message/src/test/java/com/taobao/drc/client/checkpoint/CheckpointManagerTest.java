@@ -48,9 +48,9 @@ public class CheckpointManagerTest {
         cm.removeRecord(r2);
         assertNull(cm.getSaveCheckpoint());
 
-        // now ack the head record: saveCheckpoint advances to the head's safeTimestamp
+        // Closing the gap confirms the entire already-ACKed prefix.
         cm.removeRecord(r1);
-        assertEquals("1000", cm.getSaveCheckpoint());
+        assertEquals("2000", cm.getSaveCheckpoint());
     }
 
     @Test

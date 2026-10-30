@@ -115,6 +115,17 @@ public class UserConfig {
 
     private boolean multiMode;
 
+    private int maxPendingAckRanges;
+
+    public int getMaxPendingAckRanges() { return maxPendingAckRanges; }
+
+    public void setMaxPendingAckRanges(int maximum) {
+        if (maximum < 0) {
+            throw new IllegalArgumentException("client.maxPendingAckRanges must be >= 0");
+        }
+        maxPendingAckRanges = maximum;
+    }
+
     public UserConfig(){
     }
 

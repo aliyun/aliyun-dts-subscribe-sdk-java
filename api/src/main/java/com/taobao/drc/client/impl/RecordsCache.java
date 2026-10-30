@@ -123,7 +123,9 @@ public class RecordsCache {
       case UPDATE:
       case REPLACE:
           if (inTransaction == false) {
-              records.clear();
+              // Transaction markers may be disabled or filtered at the source.
+              readyRecords.add(r);
+              bytesOfRecordsCached += r.getRecordLength();
           } else {
               records.add(r);
               bytesOfRecordsCached += r.getRecordLength();

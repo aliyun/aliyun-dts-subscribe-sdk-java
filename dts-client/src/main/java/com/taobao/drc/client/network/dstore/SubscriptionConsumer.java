@@ -68,21 +68,6 @@ public class SubscriptionConsumer extends BaseDStoreConsumer {
         consumer.setFetchMatchFunction(userConfig.isFnMatchFilter() ? TagMatchFunction.FNMATCH : TagMatchFunction.REGEX);
     }
 
-    /**
-     * reset seek partition offset
-     */
-    private void reset() {
-        try {
-            consumer.close();
-            consumer = null;
-        } catch (Throwable e) {
-            logger.warn("reset dstore consumer error:" + e.getMessage());
-        }
-        prepareRecovery();
-        newConsumer(getConfig(), true);
-        lastReceivedTime = System.currentTimeMillis();
-    }
-
     @Override
     public List<DataMessage.Record> poll(long timeoutMs) throws InterruptedException {
         SchemafulConsumerRecords consumerRecords = null;
@@ -96,14 +81,11 @@ public class SubscriptionConsumer extends BaseDStoreConsumer {
                     + "[currentOutOfRangeOffset:" + (null != lastOutOfRangeOffset ? lastOutOfRangeOffset : -1) + "]" + e.getMessage();
             logger.warn(message);
             AbstractStoreClient.sendRuntimeLog(listener, "WARN", message);
-            Thread.sleep(5000);
-            reset();
-            return Collections.emptyList();
+            // Let the coordinator fence all shards and register/seek from one snapshot.
+            throw e;
         } catch (ClusterSwitchListener.ClusterSwitchException e) {
-            logger.warn("Cluster switch exception, reset the consumer");
-            Thread.sleep(5000);
-            reset();
-            return Collections.emptyList();
+            logger.warn("Cluster switch exception, reconnect through subscription coordinator");
+            throw e;
         }
         if (null == consumerRecords || consumerRecords.isEmpty()) {
             //If long time not got messages, Client will check dstore is ok or not.

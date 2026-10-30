@@ -127,7 +127,7 @@ public class RecoveryPositionTest {
         assertEquals("1300", listener.delivered.get(0).getSafeTimestamp());
     }
 
-    @Test public void singleServiceWithoutAckTrackingFallsBackConservatively() throws Exception {
+    @Test public void singleServiceWithoutAckRecoversFromSuccessfulCallback() throws Exception {
         CheckpointManager manager = new CheckpointManager(false);
         UserConfig config = config();
         CapturingListener listener = new CapturingListener();
@@ -137,10 +137,10 @@ public class RecoveryPositionTest {
         consumer.receive(DataMessage.Record.Type.HEARTBEAT, "9000");
         consumer.init(config, manager);
         consumer.getPosition();
-        assertEquals(1000L, consumer.requestedTimestamp);
+        assertEquals(9000L, consumer.requestedTimestamp);
     }
 
-    @Test public void singleServiceRecoversFromAcknowledgedTransactionBoundary() throws Exception {
+    @Test public void singleServiceRecoversFromCompletedTransactionBoundary() throws Exception {
         UserConfig config = config();
         CheckpointManager manager = new CheckpointManager(false);
         CapturingListener listener = new CapturingListener();
@@ -149,8 +149,8 @@ public class RecoveryPositionTest {
         first.receive(DataMessage.Record.Type.BEGIN, "1100");
         first.receive(DataMessage.Record.Type.INSERT, "1200");
         first.receive(DataMessage.Record.Type.HEARTBEAT, "9000");
-        listener.delivered.get(1).ackAsConsumed(); // cannot skip BEGIN
-        assertNull(manager.getSaveCheckpoint());
+        listener.delivered.get(1).ackAsConsumed(); // optional ACK cannot change callback semantics
+        assertEquals("1100", manager.getSaveCheckpoint());
         listener.delivered.get(0).ackAsConsumed();
         listener.delivered.get(0).ackAsConsumed();
         assertEquals("1100", manager.getSaveCheckpoint());
@@ -165,7 +165,7 @@ public class RecoveryPositionTest {
         assertEquals("1300", manager.getSaveCheckpoint());
     }
 
-    @Test public void singleServiceWithoutAcksHasBoundedTrackingAndDoesNotSkipOverflow() throws Exception {
+    @Test public void singleServiceLargeWindowKeepsTrackingWithoutRetainingPayloadLinks() throws Exception {
         CheckpointManager manager = new CheckpointManager(false);
         CapturingListener listener = new CapturingListener();
         TestConsumer consumer = new TestConsumer(listener);
@@ -174,20 +174,23 @@ public class RecoveryPositionTest {
         for (int i = 0; i < 10241; i++) {
             consumer.receive(DataMessage.Record.Type.INSERT, Integer.toString(1100 + i));
         }
+        assertEquals("11340", manager.getSaveCheckpoint());
+        assertEquals(0L, manager.getPendingCount());
+        assertEquals(0, manager.getPendingAckRangeCount());
         for (DataMessage.Record record : listener.delivered) {
             assertNull(record.getPrev());
             record.ackAsConsumed();
         }
-        assertNull(manager.getSaveCheckpoint());
+        assertEquals("11340", manager.getSaveCheckpoint());
         consumer.init(config, manager);
         consumer.getPosition();
-        assertEquals(1000L, consumer.requestedTimestamp);
-        consumer.receive(DataMessage.Record.Type.INSERT, "1200");
+        assertEquals(11340L, consumer.requestedTimestamp);
+        consumer.receive(DataMessage.Record.Type.INSERT, "12000");
         listener.delivered.get(10241).ackAsConsumed();
-        assertEquals("1200", manager.getSaveCheckpoint());
+        assertEquals("12000", manager.getSaveCheckpoint());
     }
 
-    @Test public void singleServiceOverflowFreezesPreviouslyConfirmedBoundary() throws Exception {
+    @Test public void singleServiceLargeWindowDoesNotFreezePreviouslyConfirmedBoundary() throws Exception {
         CheckpointManager manager = new CheckpointManager(false);
         CapturingListener listener = new CapturingListener();
         TestConsumer consumer = new TestConsumer(listener);
@@ -198,18 +201,18 @@ public class RecoveryPositionTest {
             consumer.receive(DataMessage.Record.Type.INSERT, Integer.toString(1200 + i));
         }
         for (DataMessage.Record record : listener.delivered) record.ackAsConsumed();
-        assertEquals("1100", manager.getSaveCheckpoint());
-        assertEquals("1100", manager.prepareRecovery("9000"));
+        assertEquals("11440", manager.getSaveCheckpoint());
+        assertEquals("11440", manager.prepareRecovery("9000"));
         consumer.init(config(), manager);
         consumer.getPosition();
-        assertEquals(1100L, consumer.requestedTimestamp);
+        assertEquals(11440L, consumer.requestedTimestamp);
     }
 
-    @Test public void overflowAndAckRaceCannotSkipAnUnconfirmedHead() throws Exception {
+    @Test public void registrationAndAckRaceCannotSkipAnUnconfirmedHead() throws Exception {
         java.util.concurrent.ExecutorService threads = java.util.concurrent.Executors.newFixedThreadPool(2);
         try {
             for (int attempt = 0; attempt < 8; attempt++) {
-                CheckpointManager manager = new CheckpointManager(false);
+                CheckpointManager manager = new CheckpointManager(true);
                 CheckpointManager.Recovery recovery = manager.beginRecovery("1000");
                 List<DataMessage.Record> records = new ArrayList<DataMessage.Record>();
                 for (int i = 0; i < 10241; i++) {
@@ -245,7 +248,7 @@ public class RecoveryPositionTest {
     }
 
     @Test public void registrationFreezesBoundaryAndFencesLateAcksBeforeSeek() throws Exception {
-        CheckpointManager manager = new CheckpointManager(false);
+        CheckpointManager manager = new CheckpointManager(true);
         CapturingListener listener = new CapturingListener();
         TestConsumer consumer = new TestConsumer(listener);
         UserConfig config = config();
@@ -263,7 +266,7 @@ public class RecoveryPositionTest {
     }
 
     @Test public void committedTransactionAdvancesButNextUnconfirmedTransactionDoesNot() throws Exception {
-        CheckpointManager manager = new CheckpointManager(false);
+        CheckpointManager manager = new CheckpointManager(true);
         CapturingListener listener = new CapturingListener();
         TestConsumer consumer = new TestConsumer(listener);
         UserConfig config = config();
@@ -300,7 +303,8 @@ public class RecoveryPositionTest {
         TestConsumer consumer = new TestConsumer(listener);
         UserConfig config = config();
         consumer.init(config, manager);
-        consumer.receive(DataMessage.Record.Type.INSERT, "1100");
+        try { consumer.receive(DataMessage.Record.Type.INSERT, "1100"); fail("expected callback failure"); }
+        catch (Exception expected) { assertEquals("target write failed", expected.getMessage()); }
         consumer.receive(DataMessage.Record.Type.HEARTBEAT, "9000");
         assertNull(manager.getSaveCheckpoint());
         consumer.init(config, manager);

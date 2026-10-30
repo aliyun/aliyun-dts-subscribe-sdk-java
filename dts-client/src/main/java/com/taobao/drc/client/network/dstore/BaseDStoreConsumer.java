@@ -21,6 +21,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * A abstract class that using to consume data from DStore,which implements framework method.
@@ -37,11 +38,13 @@ public abstract class BaseDStoreConsumer extends Thread implements DStoreConsume
     private DataFlowLimitHandler dataFlowLimitHandler;
     private CheckpointManager checkpointManager;
     private String recoveryTimestamp;
+    private CheckpointManager.Recovery recovery;
 
     private final CountDownLatch sync = new CountDownLatch(1);
 
-    private Throwable error;
+    private volatile Throwable error;
     private volatile boolean isClosed;
+    private final AtomicBoolean resourcesClosed = new AtomicBoolean();
 
     public BaseDStoreConsumer(Listener listener) {
         this.listener = listener;
@@ -62,9 +65,17 @@ public abstract class BaseDStoreConsumer extends Thread implements DStoreConsume
         dataFlowLimitHandler = new DataFlowLimitHandler(this.config);
     }
 
-    protected void prepareRecovery() {
-        CheckpointManager.Recovery recovery = checkpointManager.beginRecovery(
+    protected synchronized void prepareRecovery() {
+        recovery = checkpointManager.beginRecovery(
                 config.getCheckpoint().getTimestamp());
+        final CheckpointManager.Recovery attempt = recovery;
+        attempt.setFailureListener(new Runnable() {
+            @Override public void run() {
+                synchronized (BaseDStoreConsumer.this) {
+                    if (recovery == attempt) { error = attempt.getFailure(); close(); }
+                }
+            }
+        });
         recoveryTimestamp = recovery.getTimestamp();
         try {
             // An interrupted old producer can still be finishing a batch. Give
@@ -92,28 +103,35 @@ public abstract class BaseDStoreConsumer extends Thread implements DStoreConsume
      */
     @Override
     public void run() {
-        while (!this.isInterrupted()) {
-            try {
+        try {
+            if (!isClosed) { recovery.markConnected(); }
+            while (!isClosed && !isInterrupted() && recovery.isActive()) {
+                recovery.checkForStalledProgress();
                 //listener notify
                 List<DataMessage.Record> records = poll(pollTimeOut);
                 if (null != records && !records.isEmpty()) {
                     for (DataMessage.Record record : records) {
+                        if (isClosed || isInterrupted()) { break; }
                         dataFlowLimitHandler.channelRead();
                         preHelper.process(record);
                         notifyHeper.process(record);
                     }
                 }
-            } catch (InterruptedException e) {
-                sync.countDown();
-            } catch (org.apache.kafka.common.errors.InterruptException e) {
-                sync.countDown();
-            }  catch (Throwable e) {
-                logger.error("poll record error", e);
-                sync.countDown();
-                throw new RuntimeException(e);
             }
+        } catch (InterruptedException e) {
+            interrupt();
+        } catch (org.apache.kafka.common.errors.InterruptException e) {
+            interrupt();
+        } catch (Throwable e) {
+            error = e;
+            recovery.fail(e);
+            logger.error("poll record error", e);
+        } finally {
+            isClosed = true;
+            recovery.invalidate();
+            closeResources();
+            sync.countDown();
         }
-        sync.countDown();
     }
 
     /**
@@ -124,18 +142,39 @@ public abstract class BaseDStoreConsumer extends Thread implements DStoreConsume
         try {
             sync.await();
         } catch (InterruptedException e) {
-            logger.warn("[" + config.getSubTopic() + "]leave sync method.");
+            close();
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while waiting for DTS consumer", e);
         }
+        if (error instanceof RuntimeException) { throw (RuntimeException) error; }
+        if (error instanceof Error) { throw (Error) error; }
+        if (error != null) { throw new IllegalStateException("DTS consumer failed", error); }
     }
 
     @Override
-    public void close() {
+    public synchronized void close() {
+        isClosed = true;
+        if (recovery != null) { recovery.invalidate(); }
+        interrupt();
+        if (getState() == State.NEW) {
+            closeResources();
+            sync.countDown();
+        }
+    }
+
+    private void closeResources() {
+        if (!resourcesClosed.compareAndSet(false, true)) { return; }
+        // Kafka close can itself reject an interrupted caller. Cleanup belongs
+        // to this worker, with its interrupt flag restored afterwards.
+        boolean interrupted = Thread.interrupted();
         try {
             doClose();
         } catch (Throwable e) {
-            logger.warn("close DStoreConsumer failed." + e.getMessage());
+            if (error == null) { error = e; }
+            logger.warn("close DStoreConsumer failed", e);
+        } finally {
+            if (interrupted) { Thread.currentThread().interrupt(); }
         }
-        this.interrupt();
     }
 
     protected Map<String, Object> consumerConfig(UserConfig userConfig) {
