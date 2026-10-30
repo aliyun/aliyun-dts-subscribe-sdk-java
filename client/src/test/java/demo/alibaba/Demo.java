@@ -16,10 +16,10 @@ public class Demo {
         public void notify(DataMessage message) {
             for (DataMessage.Record record : message.getRecordList()) {
                 System.out.println(record.getDbname()+":"+record.getTablename()+":"+record.getOpt()+":"+record.getTimestamp());
-                //如果是多subTopic订阅，即通过client.startMultiService().join()启动订阅客户端，在消费完message后必须执行record.ackAsConsumed()。
-                //record.ackAsConsumed();
-                //保存已经消费的点位
-                //checkpointOfTimestamp = record.getSafeTimestamp();
+                // startMultiService：所有交付记录处理成功后逐条 ACK，包含心跳和事务标记。
+                // startService：整个 notify 正常返回才确认完成，下面 ACK 是安全无操作；不能仅入异步队列后返回。
+                record.ackAsConsumed();
+                // 散列订阅持久化起点应读取 client.getMultiSafeTimestamp()，不能用某个分片的单条位点代替。
             }
         }
 

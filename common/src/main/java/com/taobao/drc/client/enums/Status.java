@@ -7,4 +7,5 @@ public enum Status {
     RAW,
     INIT,
     START,
+    STOPPED,
 }

@@ -14,7 +14,6 @@ import com.taobao.drc.client.utils.NetworkUtils;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.util.concurrent.Future;
-import org.apache.commons.beanutils.BeanUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,9 +22,10 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -42,6 +42,7 @@ public class DRCStoreClientImpl extends AbstractStoreClient {
 
     public DRCStoreClientImpl(Listener listener, UserConfig userConfig, CheckpointManager checkpointManager, DataFilterBase filter, String parseThreadPrefix, String notifyThreadPrefix) {
         super(listener, userConfig, checkpointManager, filter, parseThreadPrefix, notifyThreadPrefix);
+        checkpointManager.setMaxPendingAckRanges(userConfig.getMaxPendingAckRanges());
         endpoint = new NetworkEndpoint();
         endpoint.setTransportType(userConfig.getTransportType());
         endpoint.setMessageListener(listener);
@@ -80,17 +81,22 @@ public class DRCStoreClientImpl extends AbstractStoreClient {
         if (firstBoot) {
             endpoint.start(false, userConfig);
         }
-        final ClusterManagerFacade.StoreInfo storeInfo = endpoint.findStore(userConfig, firstBoot);
-        if (dbType == null) {
-            dbType = NetworkUtils.retrieveDBTypeFromRemote(userConfig, userConfig.getSubTopic());
-        }
+        final long generation = endpoint.getGeneration();
+        ClusterManagerFacade.askToken(userConfig);
+        ClusterManagerFacade.askTopic(userConfig);
+        ClusterManagerFacade.askRegionInfo(userConfig);
+        prepareSingleTopic(userConfig.getSubTopic());
+        validateDataFilter(userConfig.getSubTopic());
+        userConfig.getCheckpoint().setTimestamp(checkpointManager.prepareDrcRecovery(userConfig.getCheckpoint().getTimestamp()));
+        final ClusterManagerFacade.StoreInfo storeInfo = ClusterManagerFacade.fetchStoreInfo(userConfig,
+                userConfig.getTransportType() == TransportType.DRCNET);
         Callable<Boolean> runnable = new Callable() {
             @Override
-            public Boolean call() {
+            public Boolean call() throws Exception {
                 boolean callResult = false;
                 try {
                     NonReconnectableConnectionStateChangeListener stateListener = new NonReconnectableConnectionStateChangeListener(userConfig);
-                    ChannelFuture channelFuture = endpoint.connectToStore(storeInfo, userConfig, stateListener);
+                    ChannelFuture channelFuture = endpoint.connectToStore(storeInfo, userConfig, stateListener, checkpointManager, generation);
                     log.info("DRCClient start,subTopic:" + userConfig.getSubTopic() + " init checkpoint:" + userConfig.getCheckpoint().toString());
                     // block until channel is inactive
                     stateListener.blockUntilDisconnected();
@@ -99,8 +105,10 @@ public class DRCStoreClientImpl extends AbstractStoreClient {
                     }
                     // block until channel is closed
                     channelFuture.channel().closeFuture().sync();
+                    rethrow(stateListener.getThrowable());
                 } catch (Exception e) {
                     log.error("client is error", e);
+                    throw e;
                 }
                 return callResult;
             }
@@ -118,63 +126,66 @@ public class DRCStoreClientImpl extends AbstractStoreClient {
         if (firstBoot) {
             endpoint.start(true, userConfig);
         }
+        final long generation = endpoint.getGeneration();
         Callable<Boolean> runnable = new Callable<Boolean>() {
             @Override
             public Boolean call() throws Exception {
                 ClusterManagerFacade.askToken(userConfig);
                 ClusterManagerFacade.askRegionInfo(userConfig);
                 List<String> subTopics = ClusterManagerFacade.askMultiTopic(userConfig);
+                if (subTopics.isEmpty()) { throw new IllegalStateException("No DRC subscription topics"); }
+                validateDataFilter(subTopics.get(0));
+                prepareTopics(subTopics);
                 final CountDownLatch latch = new CountDownLatch(1);
                 final AtomicInteger readRecordCount = new AtomicInteger();
-                service = Executors.newFixedThreadPool(subTopics.size(), new DRCClientThreadFactory("DRCMultiServiceDaemon"));
-                for (final String subTopic : subTopics) {
-                    service.submit(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                UserConfig uc;
-                                CheckpointManager cm;
-                                if (!userConfigMap.containsKey(subTopic)) {
-                                    validateDataFilter(subTopic);
-                                    uc = (UserConfig) BeanUtils.cloneBean(userConfig);
-                                    uc.setMultiMode(true);
-                                    uc.setSubTopic(subTopic);
-                                    /**
-                                     * inner deep clone
-                                     */
-                                    cloneInner(userConfig, uc);
-                                    userConfigMap.put(subTopic, uc);
-
-                                    //checkpoint
-                                    cm = new CheckpointManager(uc.isMultiMode());
-                                    cm.setMultiMode(true);
-                                    checkpointManagerMap.put(subTopic, cm);
-                                } else {
-                                    uc = userConfigMap.get(subTopic);
-                                    cm = checkpointManagerMap.get(subTopic);
-
-                                    //token maybe expired
+                final AtomicReference<Throwable> failure = new AtomicReference<Throwable>();
+                final ExecutorService attemptService = createMultiServiceExecutor(subTopics.size(), "DRCMultiServiceDaemon");
+                service = attemptService;
+                try {
+                    for (final String subTopic : subTopics) {
+                        attemptService.submit(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    UserConfig uc = userConfigMap.get(subTopic);
+                                    CheckpointManager cm = checkpointManagerMap.get(subTopic);
                                     ClusterManagerFacade.askToken(uc);
+                                    if (Thread.currentThread().isInterrupted() || endpoint.getGeneration() != generation) { return; }
+                                    uc.getCheckpoint().setTimestamp(cm.prepareDrcRecovery(uc.getCheckpoint().getTimestamp()));
+                                    ClusterManagerFacade.StoreInfo storeInfo = ClusterManagerFacade.fetchStoreInfo(uc, userConfig.getTransportType() == TransportType.DRCNET);
+                                    NonReconnectableConnectionStateChangeListener stateListener = new NonReconnectableConnectionStateChangeListener(uc);
+                                    ChannelFuture future = endpoint.connectToStore(storeInfo, uc, stateListener, cm, generation);
+                                    log.info("DRCClient start,subTopic:" + uc.getSubTopic() + " init checkpoint:" + uc.getCheckpoint().toString());
+                                    stateListener.blockUntilDisconnected();
+                                    if (stateListener.isGottenFirstRecord()) {
+                                        readRecordCount.incrementAndGet();
+                                    }
+                                    future.channel().closeFuture().sync();
+                                    rethrow(stateListener.getThrowable());
+                                } catch (Throwable e) {
+                                    failure.compareAndSet(null, e);
+                                    log.info("client start failed,subTopic:" + subTopic + ",error:[" + e.getMessage() + "]");
+                                } finally {
+                                    latch.countDown();
                                 }
-                                ClusterManagerFacade.StoreInfo storeInfo = ClusterManagerFacade.fetchStoreInfo(uc, userConfig.getTransportType() == TransportType.DRCNET);
-                                NonReconnectableConnectionStateChangeListener stateListener = new NonReconnectableConnectionStateChangeListener(uc);
-                                ChannelFuture future = endpoint.connectToStore(storeInfo, uc, stateListener, cm);
-                                log.info("DRCClient start,subTopic:" + uc.getSubTopic() + " init checkpoint:" + uc.getCheckpoint().toString());
-                                stateListener.blockUntilDisconnected();
-                                if (stateListener.isGottenFirstRecord()) {
-                                    readRecordCount.incrementAndGet();
-                                }
-                                future.channel().closeFuture().sync();
-                            } catch (Exception e) {
-                                log.info("client start failed,subTopic:" + subTopic + ",error:[" + e.getMessage() + "]");
-                            } finally {
-                                latch.countDown();
                             }
-                        }
-                    });
+                        });
+                    }
+                    latch.await();
+                } finally {
+                    for (CheckpointManager manager : checkpointManagerMap.values()) { manager.invalidate(); }
+                    attemptService.shutdownNow();
+                    endpoint.close();
+                    firstBootstrap.set(false);
+                    boolean interrupted = false;
+                    while (!attemptService.isTerminated()) {
+                        try { attemptService.awaitTermination(1, TimeUnit.DAYS); }
+                        catch (InterruptedException e) { interrupted = true; }
+                    }
+                    for (CheckpointManager manager : checkpointManagerMap.values()) { manager.invalidate(); }
+                    if (interrupted) { Thread.currentThread().interrupt(); }
                 }
-                latch.await();
-                service.shutdownNow();
+                rethrow(failure.get());
                 return readRecordCount.get() == subTopics.size();
             }
         };
@@ -191,11 +202,11 @@ public class DRCStoreClientImpl extends AbstractStoreClient {
 
     @Override
     public void stopService() {
+        checkpointManager.invalidate();
+        for (CheckpointManager manager : checkpointManagerMap.values()) { manager.invalidate(); }
         try {
-            if (null != service) {
-                service.shutdownNow();
-                service = null;
-            }
+            ExecutorService stopping = service;
+            if (stopping != null) { stopping.shutdownNow(); }
             if (null != endpoint) {
                 endpoint.close();
             }
@@ -204,6 +215,12 @@ public class DRCStoreClientImpl extends AbstractStoreClient {
         } finally {
             firstBootstrap.compareAndSet(true, false);
         }
+    }
+
+    private static void rethrow(Throwable cause) throws Exception {
+        if (cause instanceof Exception) { throw (Exception) cause; }
+        if (cause instanceof Error) { throw (Error) cause; }
+        if (cause != null) { throw new IllegalStateException("DRC shard failed", cause); }
     }
 
     private static class NonReconnectableConnectionStateChangeListener implements ConnectionStateChangeListener {
@@ -247,8 +264,8 @@ public class DRCStoreClientImpl extends AbstractStoreClient {
         }
 
         @Override
-        public long onException(Channel channel, Throwable throwable) {
-            this.throwable = throwable;
+        public synchronized long onException(Channel channel, Throwable throwable) {
+            if (this.throwable == null) { this.throwable = throwable; }
             log.warn("Caught exception on channel of [" + userConfig.getSubTopic() + "]" +
                             (channel == null ? "" : ", address[" + channel.remoteAddress() + "]"),
                     throwable);
@@ -265,14 +282,9 @@ public class DRCStoreClientImpl extends AbstractStoreClient {
         }
 
         public void blockUntilDisconnected() throws InterruptedException {
-            while (!disconnected) {
-                lock.lock();
-                try {
-                    condition.await();
-                } finally {
-                    lock.unlock();
-                }
-            }
+            lock.lock();
+            try { while (!disconnected) { condition.await(); } }
+            finally { lock.unlock(); }
         }
     }
 }

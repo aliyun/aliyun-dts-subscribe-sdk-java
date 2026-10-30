@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Callable;
 
 import static com.taobao.drc.client.enums.Status.INIT;
 import static com.taobao.drc.client.enums.Status.RAW;
@@ -46,7 +47,7 @@ public class DRCClientImpl implements DRCClient {
 
     private DataFilterBase filter;
 
-    private Status status = RAW;
+    private volatile Status status = RAW;
 
     private boolean autoRetry = true;
 
@@ -62,7 +63,13 @@ public class DRCClientImpl implements DRCClient {
 
     private String notifyThreadPrefix;
 
-    private StoreClient client;
+    private volatile StoreClient client;
+    private final Object lifecycleLock = new Object();
+    private volatile Thread worker;
+    private volatile Throwable lastFailure;
+    private Boolean multiSubscription;
+    private Checkpoint initialCheckpoint;
+    private SubscribeChannel clientChannel;
 
     public DRCClientImpl(String propertiesFilename)
             throws IOException {
@@ -167,6 +174,7 @@ public class DRCClientImpl implements DRCClient {
         Checkpoint checkpoint = new Checkpoint();
         buildCheckpoint(checkpoint, startingPoint, instance);
         userConfig.setCheckpoint(checkpoint);
+        initialCheckpoint = new Checkpoint(checkpoint);
         initConfig(groupName, dbName, identification, localFilename);
         log.info("initialize the service with starting point: " + startingPoint);
         status=INIT;
@@ -203,7 +211,8 @@ public class DRCClientImpl implements DRCClient {
         if (status != RAW) {
             throw new Exception("server state is error,current state:" + status);
         }
-        userConfig.setCheckpoint(checkpoint);
+        userConfig.setCheckpoint(new Checkpoint(checkpoint));
+        initialCheckpoint = new Checkpoint(checkpoint);
         initConfig(groupName, dbName, identification, localFilename);
         log.info("Initialize the service with starting point: " + checkpoint.toString());
         status=INIT;
@@ -332,6 +341,7 @@ public class DRCClientImpl implements DRCClient {
         if (properties.getProperty(POLL_RECORDS_SIZE) != null) {
             userConfig.setPollRecordsSize(properties.getProperty(POLL_RECORDS_SIZE));
         }
+        userConfig.setMaxPendingAckRanges(Integer.parseInt(properties.getProperty(MAX_PENDING_ACK_RANGES, "0")));
 
         String kafkaSocketTimeOut = properties.getProperty(SOCKET_TIMEOUT_MS);
         if (StringUtils.isNotBlank(kafkaSocketTimeOut) && StringUtils.isNumeric(kafkaSocketTimeOut)) {
@@ -373,61 +383,93 @@ public class DRCClientImpl implements DRCClient {
 
     @Override
     public Thread startService() throws Exception {
-        if (status != INIT) {
-            throw new Exception("server state is error,current state:" + status);
-        }
-        Thread thread = startWithFailover(false);
-        thread.start();
-        log.info("start service successfully");
-        log.info("dts client version: " + Constant.DTS_CLIENT_VERSION);
-        status = Status.START;
-        return thread;
+        return start(false);
     }
 
     @Override
     public Thread startMultiService() throws Exception {
-        if (status != INIT) {
-            throw new Exception("multi-service state is error,current state:" + status);
+        return start(true);
+    }
+
+    private Thread start(boolean multi) {
+        synchronized (lifecycleLock) {
+            if (status != INIT || (worker != null && worker.isAlive())) {
+                throw new IllegalStateException("Cannot start subscription in state " + status + "; join then resetService first");
+            }
+            if (multiSubscription != null && multiSubscription != multi) {
+                throw new IllegalStateException("Changing startService/startMultiService requires a new client");
+            }
+            multiSubscription = multi;
+            userConfig.setMultiMode(multi);
+            quit = false; lastFailure = null; status = Status.START;
+            worker = startWithFailover(multi);
+            worker.setName("DTSSubscriptionCoordinator");
+            worker.start();
+            log.info("Started subscription, client version " + Constant.DTS_CLIENT_VERSION);
+            return worker;
         }
-        if (userConfig.isMultiServiceRetry()) {
-            userConfig.setRetryTimes(Integer.MAX_VALUE);
-        }
-        Thread thread = startWithFailover(true);
-        thread.start();
-        log.info("start multi-service successfully");
-        status = Status.START;
-        return thread;
     }
 
     private Thread startWithFailover(final boolean isMulti) {
         return new Thread() {
             @Override
             public void run() {
-                final int maxRetryTimes = userConfig.getRetryTimes();
+                final int maxRetryTimes = isMulti && userConfig.isMultiServiceRetry() ? Integer.MAX_VALUE : userConfig.getRetryTimes();
                 int retriedTimes = 0;
+                try {
                 do {
+                    if (quit) { break; }
                     Throwable lastException = null;
+                    StoreClient selected = null;
+                    long connectionsBeforeAttempt = 0;
                     try {
-                        boolean callResult;
-                        if (isMulti) {
-                            callResult = switchClient(isMulti).startMultiService().call();
-                        } else {
-                            callResult = switchClient(isMulti).startService().call();
+                        selected = switchClient(isMulti);
+                        if (selected != null) { connectionsBeforeAttempt = selected.getConnectionCount(); }
+                        Callable<Boolean> attempt = null;
+                        synchronized (lifecycleLock) {
+                            if (quit || selected == null) { break; }
+                            client = selected;
+                            // DTS only creates a Callable here. Capture its
+                            // cancellation generation atomically with stop.
+                            if (selected instanceof DStoreClientImpl) {
+                                attempt = isMulti ? selected.startMultiService() : selected.startService();
+                            }
                         }
+                        if (attempt == null) {
+                            // DRC preparation can query CM: keep it outside the
+                            // lock and clean up if stop raced with preparation.
+                            try {
+                                attempt = isMulti ? selected.startMultiService() : selected.startService();
+                            } finally {
+                                if (quit) {
+                                    try { selected.stopService(); }
+                                    catch (Throwable cleanupError) {
+                                        log.warn("Failed to close stopped store after preparation", cleanupError);
+                                    }
+                                }
+                            }
+                            if (quit) { break; }
+                        }
+                        boolean callResult = attempt.call();
                         if (callResult) {
                             retriedTimes = 0;
                         }
                     } catch (DStoreOffsetNotExistException e) {
-                        e.printStackTrace();
+                        lastFailure = e;
+                        log.error("Recovery data is unavailable; subscription stopped", e);
                         break;
                     } catch (Throwable e) {
                         lastException = e;
+                        if (!quit) { lastFailure = e; }
                         log.warn("retry times [" + maxRetryTimes + "], retried [" + retriedTimes + "], errors:", e);
-                        client.sendRuntimeLog("WARN","retry times [" + maxRetryTimes + "], retried [" + retriedTimes + "], errors:" + e.getMessage());
+                        if (selected != null) {
+                            selected.sendRuntimeLog("WARN","retry times [" + maxRetryTimes + "], retried [" + retriedTimes + "], errors:" + e.getMessage());
+                        }
                     }
                     if(quit){
                         break;
                     }
+                    if (selected != null && selected.getConnectionCount() > connectionsBeforeAttempt) { retriedTimes = 0; }
                     if (autoRetry) {
                         if ((maxRetryTimes != -1 && retriedTimes >= maxRetryTimes)) {
                             log.error("Reached max retry times [" + maxRetryTimes + "], retried [" + retriedTimes + "]", lastException);
@@ -443,10 +485,14 @@ public class DRCClientImpl implements DRCClient {
                         try {
                             TimeUnit.SECONDS.sleep(10);
                         } catch (InterruptedException e) {
-                            log.error("sleep error", e);
+                            Thread.currentThread().interrupt();
+                            break;
                         }
+                        if (quit) { break; }
                         log.info("start retry");
-                        client.sendRuntimeLog("WARN", "After broken, retry cluster manager " + retriedTimes + " out of " + maxRetryTimes);
+                        if (selected != null) {
+                            selected.sendRuntimeLog("WARN", "After broken, retry cluster manager " + retriedTimes + " out of " + maxRetryTimes);
+                        }
                         retriedTimes++;
                     } else {
                         log.warn("AutoRetry is disabled");
@@ -454,14 +500,27 @@ public class DRCClientImpl implements DRCClient {
                     }
                 } while (!quit);
                 log.info("client is quit");
-                if (!quit) {
-                    throw new RuntimeException("Client exited with quit flag false");
+                } catch (RuntimeException | Error terminal) {
+                    if (lastFailure == null) { lastFailure = terminal; }
+                    throw terminal;
+                } finally {
+                    StoreClient closing = client;
+                    if (closing != null) {
+                        try { closing.stopService(); }
+                        catch (Throwable e) { if (lastFailure == null) { lastFailure = e; } log.warn("Failed to stop subscription", e); }
+                    }
+                    synchronized (lifecycleLock) { status = Status.STOPPED; }
                 }
             }
         };
     }
 
     private boolean ifExceptionCannotRetry(Throwable exception) {
+        for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
+            if (cause instanceof com.taobao.drc.client.checkpoint.CheckpointTrackingException
+                    || cause instanceof com.taobao.drc.client.checkpoint.UnsafeRecoveryException
+                    || cause instanceof DStoreOffsetNotExistException) { return true; }
+        }
         if (exception != null && exception.getMessage() != null
            &&exception.getMessage().contains(" Found no feasible stores")
            && exception.getMessage().contains("data range available: from")) {
@@ -471,9 +530,9 @@ public class DRCClientImpl implements DRCClient {
         }
     }
 
-    private StoreClient switchClient(boolean isMulti) {
+    protected StoreClient switchClient(boolean isMulti) {
         CheckpointManager checkpointManager = new CheckpointManager(isMulti);
-        SubscribeChannel oldChannel =  userConfig.getSubscribeChannel();
+        SubscribeChannel oldChannel = clientChannel;
         SubscribeChannel channel = ClusterManagerFacade.askSubscribeChannelAndRedirect(userConfig);
         userConfig.setSubscribeChannel(channel);
         ClusterManagerFacade.askForCmUrl(userConfig, channel);
@@ -486,42 +545,76 @@ public class DRCClientImpl implements DRCClient {
                 log.warn("Find subscription server switched, but stop old StoreClient failed." + e.getMessage());
             }
         }
-        if (null == tmpClient || null == oldChannel || oldChannel != channel) {
-            switch (channel) {
-                case DTS:
-                    tmpClient = new DStoreClientImpl(listener, userConfig, checkpointManager, filter, parseThreadPrefix, notifyThreadPrefix);
-                    break;
-                default:
-                    tmpClient = new DRCStoreClientImpl(listener, userConfig, checkpointManager, filter, parseThreadPrefix, notifyThreadPrefix);
-                    break;
+        synchronized (lifecycleLock) {
+            if (quit) { return null; }
+            if (null == tmpClient || null == oldChannel || oldChannel != channel) {
+                if (tmpClient != null && oldChannel != channel) {
+                    String timestamp = initialCheckpoint == null ? null : initialCheckpoint.getTimestamp();
+                    if (!StringUtils.isNumeric(timestamp)) {
+                        throw new com.taobao.drc.client.checkpoint.UnsafeRecoveryException(
+                                "Cannot migrate " + oldChannel + " to " + channel
+                                + ": original start has no portable timestamp. Supply a verified timestamp with a new client.");
+                    }
+                    String reason = "Channel changed from " + oldChannel + " to " + channel
+                            + "; protocol mapping is unverified. Replaying from original timestamp " + timestamp;
+                    log.warn(reason);
+                    checkpointManager.setRecoveryReason(reason);
+                    userConfig.setCheckpoint(new Checkpoint(null, null, null, timestamp));
+                }
+                switch (channel) {
+                    case DTS:
+                        tmpClient = new DStoreClientImpl(listener, userConfig, checkpointManager, filter, parseThreadPrefix, notifyThreadPrefix);
+                        break;
+                    default:
+                        tmpClient = new DRCStoreClientImpl(listener, userConfig, checkpointManager, filter, parseThreadPrefix, notifyThreadPrefix);
+                        break;
+                }
             }
+            this.client = tmpClient;
+            clientChannel = channel;
+            log.info("Subscription channel=" + channel + ", multi=" + isMulti + ", explicit ACK required=" + isMulti);
+            return tmpClient;
         }
-        this.client = tmpClient;
-        return this.client;
     }
 
     /**
-     * Closed active connections and set the status as not quited.
+     * Re-enable start after join, retaining the confirmed state of this subscription.
      *
      * @throws Exception
      */
     @Override
     @Deprecated
     public void resetService() throws Exception {
+        synchronized (lifecycleLock) {
+            if (status == RAW || (worker != null && worker.isAlive()) || ListenerContext.isCallbackThread()) {
+                throw new IllegalStateException("resetService requires the previous start thread to have exited; join it first");
+            }
+            quit = false;
+            status = INIT;
+        }
     }
 
     /**
-     * Stop the service (thread), after stopped, users need initialize the
-     * service again then the service can be started. It seems that the status
-     * STOPPED is the same with UNAVAILABLE, but I leave it here for further
-     * extension (e.g. restart without calling initService.
+     * Request cancellation; external callers also join the coordinator. Listener callbacks
+     * must return without joining, so that the coordinator can finish shutting them down.
      */
     @Override
     public void stopService() throws Exception {
-        quit = true;
-        if (null != client) {
-            client.stopService();
-            client = null;
+        StoreClient stopping;
+        Thread joining;
+        synchronized (lifecycleLock) {
+            quit = true;
+            stopping = client;
+            joining = worker;
+        }
+        if (joining != null && joining != Thread.currentThread()) { joining.interrupt(); }
+        if (stopping != null) { stopping.stopService(); }
+        if (joining != null && joining != Thread.currentThread() && !ListenerContext.isCallbackThread()) {
+            boolean interrupted = false;
+            while (joining.isAlive()) {
+                try { joining.join(); } catch (InterruptedException e) { interrupted = true; }
+            }
+            if (interrupted) { Thread.currentThread().interrupt(); }
         }
     }
 
@@ -726,7 +819,17 @@ public class DRCClientImpl implements DRCClient {
 
     @Override
     public String getMultiSafeTimestamp() {
-        return client.getMultiSafeTimestamp();
+        StoreClient current = client;
+        return current == null ? null : current.getMultiSafeTimestamp();
+    }
+
+    @Override public Throwable getLastFailure() { return lastFailure; }
+
+    @Override
+    public Map<String, CheckpointManager.Status> getCheckpointStatus() {
+        StoreClient current = client;
+        return current == null ? java.util.Collections.<String, CheckpointManager.Status>emptyMap()
+                : current.getCheckpointStatus();
     }
 
     @Override

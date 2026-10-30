@@ -13,6 +13,19 @@ public class DataMessage{
 
     public static class Record implements Serializable {
 
+        private static final long serialVersionUID = -4011255769041178611L;
+
+        private transient CheckpointManager.Acknowledgement acknowledgement;
+
+        /** Internal ACK receipt; application code should use ackAsConsumed(). */
+        public CheckpointManager.Acknowledgement getAcknowledgement() {
+            return acknowledgement;
+        }
+
+        public void setAcknowledgement(CheckpointManager.Acknowledgement acknowledgement) {
+            this.acknowledgement = acknowledgement;
+        }
+
         private transient Record prev;
 
         private transient Record next;

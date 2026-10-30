@@ -56,7 +56,8 @@ public class NetworkEndpoint {
 
     private Listener listener;
 
-    private boolean close;
+    private volatile boolean close;
+    private long generation;
 
     private ThreadFactory parseFactory;
 
@@ -70,7 +71,10 @@ public class NetworkEndpoint {
 
     private final AtomicReference<Channel> writeChannelRef = new AtomicReference<Channel>();
 
-    public void start(final boolean multi, final UserConfig userConfig){
+    public synchronized long getGeneration() { return generation; }
+
+    public synchronized void start(final boolean multi, final UserConfig userConfig){
+        close = false;
         bootstrap = new Bootstrap();
 		workerGroup = new NioEventLoopGroup(multi?0:1,parseFactory);
         bootstrap.group(workerGroup);
@@ -79,6 +83,9 @@ public class NetworkEndpoint {
         bootstrap.option(ChannelOption.TCP_NODELAY, true);
         bootstrap.option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
         eventExecutorGroup=new NioEventLoopGroup(multi?0:1,notifyFactory);
+        if (engine != null) {
+            sqlWorkerGroup = new DRCClientEventExecutorGroup(multi ? 0 : 1, new DRCClientThreadFactory("SqlHandlerPrefix"));
+        }
         switch (transportType) {
             // TODO: read timeout handler may be needed instead of heartbeat thread detect
             case HTTP:
@@ -94,7 +101,6 @@ public class NetworkEndpoint {
                         ch.pipeline().addLast(new DataFlowLimitHandler());
                         ch.pipeline().addLast(new RecordPreNotifyHandler(congestionController));
                         if(engine!=null) {
-                            sqlWorkerGroup = new DRCClientEventExecutorGroup(multi?0:1,new DRCClientThreadFactory("SqlHandlerPrefix"));
                             ch.pipeline().addLast(sqlWorkerGroup, "SqlFilter", new SqlHandler(engine));
                         }
                         ch.pipeline().addLast(eventExecutorGroup,new RecordNotifyHandler(congestionController));
@@ -113,7 +119,6 @@ public class NetworkEndpoint {
                         ch.pipeline().addLast(new RecordPreNotifyHandler(congestionController));
                         ch.pipeline().addLast(new UserCtrlMsgHandler());
                         if(engine!=null) {
-                            sqlWorkerGroup = new DRCClientEventExecutorGroup(multi?0:1,new DRCClientThreadFactory("SqlHandlerPrefix"));
                             ch.pipeline().addLast(sqlWorkerGroup, "SqlFilter", new SqlHandler(engine));
                         }
                         ch.pipeline().addLast(eventExecutorGroup,new RecordNotifyHandler(congestionController));
@@ -143,20 +148,22 @@ public class NetworkEndpoint {
 
 
 
-    public ChannelFuture connectStoreByHTTP(final String host, final String port, final UserConfig userConfig,
+    public synchronized ChannelFuture connectStoreByHTTP(final String host, final String port, final UserConfig userConfig,
                                             final ConnectionStateChangeListener stateChangeListener, final CheckpointManager checkpointManager) throws Exception {
+        if (close) { throw new IllegalStateException("DRC endpoint has stopped"); }
         final String uri = "http://" + host + ":" + port + "/" + userConfig.getSubTopic();
         Bootstrap localBootstrap = bootstrap.clone();
         // set attribute before connect
         setBootstrapAttributes(localBootstrap, host, port, this, userConfig, stateChangeListener, checkpointManager);
         //connect
         ChannelFuture future = localBootstrap.connect(host, Integer.parseInt(port));
+        channelSet.add(future.channel());
         final NetworkEndpoint networkEndpoint=this;
         future.addListener(new ChannelFutureListener(){
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 Channel channel=future.channel();
-                channelSet.add(channel);
+                if (close) { channel.close(); return; }
                 if(future.isSuccess()){
                     //multi is null,auto retry
                     //send param
@@ -189,18 +196,20 @@ public class NetworkEndpoint {
         return future;
     }
 
-    public ChannelFuture connectStoreByDRCNet(final String host, final String port, final UserConfig userConfig,
+    public synchronized ChannelFuture connectStoreByDRCNet(final String host, final String port, final UserConfig userConfig,
                                               final ConnectionStateChangeListener stateChangeListener, final CheckpointManager checkpointManager) throws Exception {
+        if (close) { throw new IllegalStateException("DRC endpoint has stopped"); }
         Bootstrap localBootstrap = bootstrap.clone();
         // set attribute before connect
         setBootstrapAttributes(localBootstrap, host, port, this, userConfig, stateChangeListener, checkpointManager);
         final ChannelFuture channelFuture = localBootstrap.connect(host, Integer.parseInt(port));
+        channelSet.add(channelFuture.channel());
         final NetworkEndpoint networkEndpoint=this;
         channelFuture.addListener(new ChannelFutureListener(){
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 Channel channel=future.channel();
-                channelSet.add(channel);
+                if (close) { channel.close(); return; }
                 if(future.isSuccess()){
                     //multi is null,auto retry
                     log.info("client start,subTopic:"+userConfig.getSubTopic()+" init checkpoint:"+userConfig.getCheckpoint().toString());
@@ -219,16 +228,27 @@ public class NetworkEndpoint {
     }
 
     public void close() {
-        close=true;
-        for (Channel channel : channelSet) {
-            ChannelFuture channelFuture=channel.close();
-            channelFuture.syncUninterruptibly();
+        EventExecutorGroup[] groups;
+        synchronized (this) {
+            close = true;
+            generation++;
+            for (Channel channel : channelSet) { channel.close(); }
+            groups = new EventExecutorGroup[] { workerGroup, sqlWorkerGroup, eventExecutorGroup };
         }
-        workerGroup.shutdownGracefully();
-        if (sqlWorkerGroup != null) {
-            sqlWorkerGroup.shutdownGracefully();
+        boolean callbackThread = com.taobao.drc.client.impl.ListenerContext.isCallbackThread();
+        for (EventExecutorGroup group : groups) {
+            if (group != null) {
+                for (io.netty.util.concurrent.EventExecutor executor : group) {
+                    callbackThread |= executor.inEventLoop();
+                }
+                group.shutdownGracefully(0, 30, java.util.concurrent.TimeUnit.SECONDS);
+            }
         }
-        eventExecutorGroup.shutdownGracefully();
+        if (!callbackThread) {
+            for (EventExecutorGroup group : groups) {
+                if (group != null) { group.terminationFuture().syncUninterruptibly(); }
+            }
+        }
     }
 
     public boolean isClose(){
@@ -322,5 +342,13 @@ public class NetworkEndpoint {
             default:
                 throw new IllegalArgumentException("Unsupported transport type: [" + transportType + "]");
         }
+    }
+
+    public synchronized ChannelFuture connectToStore(ClusterManagerFacade.StoreInfo storeInfo, UserConfig userConfig,
+            ConnectionStateChangeListener stateListener, CheckpointManager manager, long expectedGeneration) throws Exception {
+        if (close || generation != expectedGeneration) {
+            throw new IllegalStateException("DRC connection attempt was stopped");
+        }
+        return connectToStore(storeInfo, userConfig, stateListener, manager);
     }
 }

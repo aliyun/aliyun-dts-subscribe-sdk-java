@@ -14,6 +14,11 @@ import java.util.Map;
  */
 public interface DRCClient {
 
+    /** Per-topic ACK monitoring snapshots; empty before the store client starts. */
+    default Map<String, com.taobao.drc.client.checkpoint.CheckpointManager.Status> getCheckpointStatus() {
+        return java.util.Collections.emptyMap();
+    }
+
     /*
      * below methods use to initiate DRCClient.
      */
@@ -99,24 +104,29 @@ public interface DRCClient {
 
     /**
      * Start the service running in a thread, the method does not block.
+     * On both DRC and DTS, successful return from notify confirms the entire batch.
+     * Finish processing before returning; per-record ACK is a safe no-op in this mode.
      * @return The launched thread.
      * @throws Exception DRCClient internal Exception.
      */
     Thread startService() throws Exception;
 
     /**
-     * use hash mode,multiple subTopics
+     * Use hash mode. Every delivered original Record must be acknowledged after processing,
+     * including heartbeat and transaction markers, on both DRC and DTS (even with one subTopic).
      * @throws Exception
      */
     Thread startMultiService()throws Exception;
 
     /**
-     * Stop the service thread;
+     * Stop the service and wait for its worker outside callbacks. Inside a callback this only
+     * requests cancellation. Confirmed recovery state remains available for querying/reset.
      */
     void stopService() throws Exception;
 
     /**
-     * Closed active connections and set the status as not quited.
+     * After joining the previous start thread, allow another start with the same subscription
+     * mode and confirmed recovery state. Reject calls while the worker is still running.
      *
      * @throws Exception
      */
@@ -346,6 +356,9 @@ public interface DRCClient {
      * @return
      */
     String getMultiSafeTimestamp();
+
+    /** Original cause of the most recent failed run; retained after stop/join. */
+    default Throwable getLastFailure() { return null; }
 
     /**
      *

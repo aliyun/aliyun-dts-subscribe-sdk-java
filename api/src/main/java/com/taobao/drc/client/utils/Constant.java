@@ -11,7 +11,7 @@ import java.util.Set;
  * Created by jianjundeng on 5/7/15.
  */
 public class Constant {
-    public static final String DTS_CLIENT_VERSION = "1.1.20";
+    public static final String DTS_CLIENT_VERSION = "1.1.21";
 
     public static final String DEFAULT_ENCODING = "UTF8";
 
@@ -52,6 +52,8 @@ public class Constant {
     public final static String NEED_RECORD_CACHE="client.requireCompleteTxn";
 
     public final static String MAX_NUM_RECORDS_PER_MESSAGE="client.maxNumOfRecordsPerMessage";
+
+    public final static String MAX_PENDING_ACK_RANGES="client.maxPendingAckRanges";
 
     public final static String MAX_TIMEOUT_PER_MESSAGE="client.maxTimeoutPerMessage";
 

@@ -1,3 +1,5 @@
+统一客户端 `com.alibaba.dts.client:client` 的 1.1.21 候选版本说明见
+[ACK、位点恢复与升级文档](docs/CLIENT_1.1.21.md)。
 
 使用方式：
 

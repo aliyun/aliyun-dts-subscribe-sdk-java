@@ -6,11 +6,10 @@ import com.taobao.drc.client.config.UserConfig;
 import com.taobao.drc.client.impl.Checkpoint;
 import com.taobao.drc.client.impl.LocalityFile;
 import com.taobao.drc.client.impl.RecordsCache;
+import com.taobao.drc.client.impl.ListenerContext;
 import com.taobao.drc.client.message.DataMessage;
 import com.taobao.drc.client.message.DataMessage.Record;
-import com.taobao.drc.client.message.DataMessage.Record.Type;
 import com.taobao.drc.client.message.drc.BinaryRecord;
-import com.taobao.drc.client.message.dts.DStoreAvroRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +37,11 @@ public class RecordNotifyHelper {
     }
 
     public void process(Object msg) throws Exception {
+        if (!checkpointManager.isActive()) {
+            return;
+        }
         Record record= (Record) msg;
+        checkpointManager.recordReceived(record);
         //update checkpoint&meta cache
         String tm = record.getTimestamp();
         switch (record.getOpt()) {
@@ -47,6 +50,7 @@ public class RecordNotifyHelper {
                 inTransaction=true;
                 break;
             case COMMIT:
+            case ROLLBACK:
                 inTransaction=false;
                 break;
         }
@@ -68,9 +72,6 @@ public class RecordNotifyHelper {
                 break;
         }
 
-        //set user config
-        record.setCheckpointManager(checkpointManager);
-
         RecordsCache recordsCache = userConfig.getRecordsCache();
         DataMessage dataMessage = new DataMessage();
         if (recordsCache != null) {
@@ -82,27 +83,38 @@ public class RecordNotifyHelper {
             dataMessage.addRecord(record);
         }
         if(dataMessage.getRecordCount()>0){
-            for(Record r:dataMessage.getRecordList()){
-                if(checkpointManager.isMultiMode()) {
-                    //add double link list
-                    checkpointManager.addRecord(r);
-                }
+            CheckpointManager.Delivery delivery = checkpointManager.beginDelivery(dataMessage.getRecordList());
+            if (!checkpointManager.isActive()) {
+                return;
             }
+            ListenerContext.enter();
             try {
                 messageListener.notify(dataMessage);
             } catch (Exception e) {
+                checkpointManager.fail(e);
                 log.error("Caught exception from notify method of [" + userConfig.getSubTopic() + "]", e);
-                messageListener.handleException(e);
+                try { messageListener.handleException(e); }
+                catch (Throwable handlerFailure) { if (handlerFailure != e) { e.addSuppressed(handlerFailure); } }
+                throw e;
+            } catch (Error error) {
+                checkpointManager.fail(error);
+                throw error;
+            } finally {
+                ListenerContext.exit();
             }
+            checkpointManager.completeDelivery(delivery);
         }
-        //re connect use heartbeat
-        Checkpoint checkpoint = userConfig.getCheckpoint();
-        if(record.getOpt()== Type.HEARTBEAT) {
-            checkpoint.setTimestamp(tm);
-            if (record instanceof DStoreAvroRecord) {
-                checkpoint.setOffset(((DStoreAvroRecord) record).getOffset());
+        if (!checkpointManager.isActive()) {
+            return;
+        }
+        // Only a successfully delivered/confirmed heartbeat is a recovery candidate.
+        final Checkpoint checkpoint = userConfig.getCheckpoint();
+        checkpointManager.runIfActive(new Runnable() {
+            @Override public void run() {
+                String heartbeat = checkpointManager.getConfirmedHeartbeat();
+                if (heartbeat != null) { checkpoint.setTimestamp(heartbeat); }
             }
-        }
+        });
 
         //persist not safe,deprecated
         persistCheckpoint(userConfig, checkpoint);
